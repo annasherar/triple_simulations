@@ -1,0 +1,4 @@
+[core]
+    remote = origin-storage
+['remote "origin-storage"']
+    url = https://dagshub.com/aleksey.generozov/starforge_mult_vis.dvc
