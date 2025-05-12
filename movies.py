@@ -372,6 +372,8 @@ def update_figure(
     my_bin = my_data["bin_ids"][tmp_bin_idx]
     # print(my_bin)
     ps = list(my_bin)
+    ps[0] = int(ps[0])
+    ps[1] = int(ps[1])
     bin_sel = get_bound_snaps_adjust(ps, high_df)
 
     last_star_snap = min(
