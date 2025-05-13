@@ -13,6 +13,7 @@ import pandas as pd
 import plotly.graph_objects as go
 import plotly.io as pio
 from dash import Input, Output, State, dcc, html
+import dash_bootstrap_components as dbc
 
 from computations import (get_bound_snaps_adjust, get_com_winf,
                           max_pairwise_dist)
@@ -59,86 +60,181 @@ class MovieData:
 
 
 ############Setting up the dashboard#############################################
-# === Initialize app ===
-app = dash.Dash(__name__)
 
+
+app = dash.Dash(__name__, external_stylesheets=[dbc.themes.FLATLY])  # Feel free to try others like LUX, MINTY, etc.
+#
+app.layout = dbc.Container([
+    # --- Top Navbar ---
+    dbc.Navbar(
+        dbc.Container([
+            dbc.NavbarBrand("Binary Snapshot Viewer", className="mx-auto fs-3 fw-bold text-white")
+        ]),
+        color="primary",
+        dark=True,
+        className="mb-4"
+    ),
+    # --- Main Grid ---
+    dbc.Row([
+        # Sidebar controls
+        dbc.Col([
+            dbc.Card([
+                dbc.CardHeader("Controls", className="bg-light fw-bold"),
+                dbc.CardBody([
+
+                    dbc.Label("Binary Index"),
+                    dcc.Input(id="bin-input", type="number", min=0, max=len(ex_index) - 1, value=0, className="form-control mb-3"),
+
+                    dbc.Label("Time Step"),
+                    dcc.Input(id="time-input", type="number", min=0, max=490,
+                    value=max(int(ex_time_max[ex_index[0]]) - ioffset, my_data["fst"][ex_index[0]]), step=1, className="form-control mb-2"),
+                    dbc.ButtonGroup([
+                        dbc.Button("←", id="step-back", color="secondary"),
+                        dbc.Button("→", id="step-forward", color="secondary"),
+                    ], className="mb-4"),
+
+                    html.Hr(),
+
+                    dbc.Label("Absolute Plot Scale"),
+                    dcc.Input(id="max-sep", type="number", value=10000, className="form-control mb-3"),
+
+                    dbc.Label("Relative Plot Scale"),
+                    dcc.Input(id="max-sep-rel", type="number", value=5, className="form-control mb-3"),
+
+                    html.Hr(),
+
+                    dbc.Label("Halo Particles"),
+                    dbc.RadioItems(
+                        id="halo_toggle",
+                        options=[
+                            {"label": "Include", "value": True},
+                            {"label": "Exclude", "value": False}
+                        ],
+                        value=True,
+                        inline=True,
+                        className="mb-3"
+                    ),
+
+                    dbc.Label("Future Companions"),
+                    dbc.RadioItems(
+                        id="comp_toggle",
+                        options=[
+                            {"label": "Include", "value": True},
+                            {"label": "Exclude", "value": False}
+                        ],
+                        value=True,
+                        inline=True
+                    )
+                ])
+            ])
+        ], width=3),
+
+        # Main plot area
+        dbc.Col([
+            dbc.Row([
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader("Absolute Scale View"),
+                        dbc.CardBody([
+                            dcc.Graph(id="snapshot-graph")
+                        ])
+                    ])
+                ], md=6),
+
+                dbc.Col([
+                    dbc.Card([
+                        dbc.CardHeader("Relative Scale View"),
+                        dbc.CardBody([
+                            dcc.Graph(id="snapshot-graph2")
+                        ])
+                    ])
+                ], md=6)
+            ])
+        ], width=9)
+    ])
+], fluid=True)
+
+
+# === Initialize app ===
+# app = dash.Dash(__name__)
+#
 # === Layout ===
-app.layout = html.Div(
-    [
-        html.H2("Binary Snapshot Viewer"),
-        html.Div(
-            [
-                dbc.Label("Binary index"),
-                dcc.Input(
-                    id="bin-input", type="number", min=0, max=len(ex_index) - 1, value=0
-                ),
-            ]
-        ),  ##Have option to have to plot range scaled to the binary separation!!!
-        html.Div(
-            [
-                dbc.Label("(Left plot) Set scale"),
-                dcc.Input(id="max-sep", type="number", value=10000),
-            ]
-        ),
-        html.Div(
-            [
-                dbc.Label("(Right plot) Set scale relative to binary separation:"),
-                dcc.Input(id="max-sep-rel", type="number", value=5),
-            ]
-        ),
-        html.Div(
-            [
-                dbc.Label("Include halo?"),
-                dbc.RadioItems(
-                    id="halo_toggle",
-                    options=[
-                        {"label": "Include halo", "value": True},
-                        {"label": "Exclude halo", "value": False},
-                    ],
-                    value=True,
-                    inline=True,
-                ),
-            ],
-            className="mb-1",
-        ),
-        html.Div(
-            [
-                dbc.Label("Include FUTURE companions?"),
-                dbc.RadioItems(
-                    id="comp_toggle",
-                    options=[
-                        {"label": "Include", "value": True},
-                        {"label": "Exclude", "value": False},
-                    ],
-                    value=True,
-                    inline=True,
-                ),
-            ],
-            className="mb-1",
-        ),
-        html.Div(
-            [
-                dbc.Label("Time:"),
-                html.Button("←", id="step-back", n_clicks=0),
-                dcc.Input(
-                    id="time-input",
-                    type="number",
-                    min=0,
-                    max=490,
-                    value=max(int(ex_time_max[ex_index[0]]) - ioffset, my_data["fst"][ex_index[0]]),
-                    step=1,
-                    style={"width": "80px"},
-                ),
-                html.Button("→", id="step-forward", n_clicks=0),
-            ],
-            style={"display": "flex", "alignItems": "center", "gap": "10px"},
-        ),
-        html.Div(
-            [dcc.Graph(id="snapshot-graph"), dcc.Graph(id="snapshot-graph2")],
-            style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
-        ),
-    ]
-)
+# app.layout = html.Div(
+#     [
+#         html.H2("Binary Snapshot Viewer"),
+#         html.Div(
+#             [
+#                 dbc.Label("Binary index"),
+#                 dcc.Input(
+#                     id="bin-input", type="number", min=0, max=len(ex_index) - 1, value=0
+#                 ),
+#             ]
+#         ),  ##Have option to have to plot range scaled to the binary separation!!!
+#         html.Div(
+#             [
+#                 dbc.Label("(Left plot) Set scale"),
+#                 dcc.Input(id="max-sep", type="number", value=10000),
+#             ]
+#         ),
+#         html.Div(
+#             [
+#                 dbc.Label("(Right plot) Set scale relative to binary separation:"),
+#                 dcc.Input(id="max-sep-rel", type="number", value=5),
+#             ]
+#         ),
+#         html.Div(
+#             [
+#                 dbc.Label("Include halo?"),
+#                 dbc.RadioItems(
+#                     id="halo_toggle",
+#                     options=[
+#                         {"label": "Include halo", "value": True},
+#                         {"label": "Exclude halo", "value": False},
+#                     ],
+#                     value=True,
+#                     inline=True,
+#                 ),
+#             ],
+#             className="mb-1",
+#         ),
+#         html.Div(
+#             [
+#                 dbc.Label("Include FUTURE companions?"),
+#                 dbc.RadioItems(
+#                     id="comp_toggle",
+#                     options=[
+#                         {"label": "Include", "value": True},
+#                         {"label": "Exclude", "value": False},
+#                     ],
+#                     value=True,
+#                     inline=True,
+#                 ),
+#             ],
+#             className="mb-1",
+#         ),
+#         html.Div(
+#             [
+#                 dbc.Label("Time:"),
+#                 html.Button("←", id="step-back", n_clicks=0),
+#                 dcc.Input(
+#                     id="time-input",
+#                     type="number",
+#                     min=0,
+#                     max=490,
+#                     value=max(int(ex_time_max[ex_index[0]]) - ioffset, my_data["fst"][ex_index[0]]),
+#                     step=1,
+#                     style={"width": "80px"},
+#                 ),
+#                 html.Button("→", id="step-forward", n_clicks=0),
+#             ],
+#             style={"display": "flex", "alignItems": "center", "gap": "10px"},
+#         ),
+#         html.Div(
+#             [dcc.Graph(id="snapshot-graph"), dcc.Graph(id="snapshot-graph2")],
+#             style={"display": "grid", "gridTemplateColumns": "1fr 1fr", "gap": "20px"},
+#         ),
+#     ]
+# )
 #################################################################################
 
 
@@ -212,7 +308,7 @@ def plotly_snapshot(movie_dat):
         ys = (paths_extra_T[movie_dat.time, :, pycol] - delta[movie_dat.time, 1]) * unit
         zs = (paths_extra_T[movie_dat.time, :, pzcol] - delta[movie_dat.time, 2]) * unit
         hover_texts = [
-            f"{name}<br>Mass: {mass:.2f} M☉<br>x={xx:.2f} y={yy:.2f} z={zz:.2f} d0={delta[movie_dat.time, 0]:.2f} d1={delta[movie_dat.time, 1]:.2f} d2={delta[movie_dat.time, 2]:.2f}"
+            f"{name}<br>Mass: {mass:.2f} M☉<br>x={xx:.2f} y={yy:.2f} z={zz:.2f}"
             for name, mass, xx, yy, zz in zip(names, masses, xs, ys, zs)
         ]
         # hover_texts = [f"{name}<br>Mass: {mass:.2f} M☉" for name, mass in zip(names, masses)]
@@ -226,8 +322,8 @@ def plotly_snapshot(movie_dat):
                 marker=dict(
                     size=3.0
                     * np.log10(paths_extra_T[movie_dat.time, :, size_col] / size_scale),
-                    color="black",
-                    opacity=0.5,
+                    color="red",
+                    line=dict(width=3, color="red"),
                     symbol="circle-open",
                 ),
                 text=hover_texts,
@@ -406,11 +502,11 @@ def update_figure(
         annotations2[int(ttt)] = hiers2[ii]
 
     annotations = [
-        f"{ps[0]} {ps[1]}"
+        f"Binary stars: {ps[0]} {ps[1]}"
         + "<br>"
-        + f"{annotations1[ii]}"
+        + f"Hier 1: {annotations1[ii]}"
         + "<br>"
-        + f"{annotations2[ii]}"
+        + f"Hier 2: {annotations2[ii]}"
         for ii in range(len(annotations1))
     ]
 

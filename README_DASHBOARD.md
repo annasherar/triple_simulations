@@ -45,7 +45,7 @@ The dashboard consists of two main plots (left and right) and a control panel th
 
 * **Component**: `dbc.RadioItems`
 * **ID**: `halo_toggle`
-* **Function**: If toggled gas halo mass is included in the particle mass (so particles may appear slighly bigger).
+* **Function**: If toggled gas halo mass is included in the particle mass (so particles may appear slighly bigger). Halo mass can be zero so this toggle may often do nothing
 * **Options**:
 
   * Include halo (`True`)
@@ -56,7 +56,7 @@ The dashboard consists of two main plots (left and right) and a control panel th
 
 * **Component**: `dbc.RadioItems`
 * **ID**: `comp_toggle`
-* **Function**: Toggles the inclusion of companions that may only bind in the future.
+* **Function**: Toggles the inclusion of companions that only bind in the future. If there are no future companions in the frame this will do nothing.
 * **Options**:
 
   * Include (`True`)
@@ -86,6 +86,7 @@ To aid the viewer the axes will flash red whenever the exchange should be occuri
 
 * Displays the spatial distribution of the binary and companions stars at the selected time.
 * Uses a fixed absolute scale set by `max-sep`.
+* The plot title shows the binary ids, and the hierarchy of each binary star. If the star is single this is blank
 
 ### snapshot-graph2 (Right Plot)
 
