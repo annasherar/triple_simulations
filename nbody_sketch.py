@@ -2,9 +2,9 @@ import pandas as pd
 import numpy as np
 
 ##Start positions of binaries and initial companions.
-ic = pd.read_parquet("init_state_all.pq")
+ic = pd.read_parquet("data/init_state_all.pq")
 ##End positions of binaries and initial companions.
-es = pd.read_parquet("end_state_all.pq")
+es = pd.read_parquet("data/end_state_all.pq")
 ##Applying various filters: (1) Halo mass cannot change too much from start to end (2) No new companions can appear from start to end (3) No particle pairs are
 ##with softening length of each other.
 filt1 = ic["frac_halo_max"]<0.01
