@@ -323,7 +323,7 @@ def plotly_snapshot(movie_dat):
                     size=3.0
                     * np.log10(paths_extra_T[movie_dat.time, :, size_col] / size_scale),
                     color="red",
-                    line=dict(width=3, color="red"),
+                    line=dict(width=2, color="blue"),
                     symbol="circle-open",
                 ),
                 text=hover_texts,
@@ -565,4 +565,4 @@ def update_figure(
 
 
 if __name__ == "__main__":
-    app.run(debug=True, port=8051)
+    app.run(debug=True, port=8050)

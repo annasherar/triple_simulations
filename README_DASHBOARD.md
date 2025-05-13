@@ -7,7 +7,7 @@ The binary stars are always shown in gray, with with the size of each point is s
 
 Currently, the set of binaries is limited to those that are exchange candidates.
 
-Current companions are show with solid red symbols. Past or future companions are shown with hollow red symbols. Hovering over a symbol gives information about its position and mass.
+Current companions are show with solid red symbols. Past or future companions are shown with open blue symbols. Hovering over a symbol gives information about its position and mass.
 
 
 ---
