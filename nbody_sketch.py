@@ -13,7 +13,7 @@ filt_soft = (~ic["is_soft"].astype(bool)) & (~es["is_soft"].astype(bool))
 filt = filt1 & filt2 & filt_soft
 ic = ic.loc[filt]
 es = es.loc[filt]
-
+###
 ##Sketch of method for Nbody integration
 ## (1) Iterate through indices Pandas dataframe
 # e.g. for index in ic.index:
