@@ -1,0 +1,104 @@
+# Binary Snapshot Viewer Dashboard Documentation
+
+## Overview
+
+The **Binary Snapshot Viewer** is an interactive web-based dashboard built using Plotly Dash. It enables users to visualize and explore snapshots of binary systems evolving over time, with options to adjust the scale, and interactively scroll through time steps.
+The binary stars are always shown in gray, with with the size of each point is set by the mass (logarithmically).
+
+Currently, the set of binaries is limited to those that are exchange candidates.
+
+Current companions are show with solid red symbols. Past or future companions are shown with hollow red symbols. Hovering over a symbol gives information about its position and mass.
+
+
+---
+
+## Layout and Controls
+
+The dashboard consists of two main plots (left and right) and a control panel that allows users to configure what is displayed in each. Below is a description of each UI element.
+
+
+### 1. Binary Index Selector
+
+* **Component**: `dcc.Input`
+* **ID**: `bin-input`
+* **Function**: Selects the binary system by its index in the dataset.
+* **Range**: `0` to `len(ex_index) - 1`, where ex_index is an array that contains the indices of all the exchange binaries
+* **Default**: `0`
+
+### 2. Plot Scale Controls
+
+#### Left Plot: Absolute Scale
+
+* **Component**: `dcc.Input`
+* **ID**: `max-sep`
+* **Function**: Sets the absolute maximum separation (in AU) for the left snapshot plot.
+* **Default**: `10000`
+
+#### Right Plot: Relative Scale
+
+* **Component**: `dcc.Input`
+* **ID**: `max-sep-rel`
+* **Function**: Sets the plot range for the right snapshot plot relative to the current binary separation (e.g., 5x the binary separation).
+* **Default**: `5`
+
+### 3. Halo Inclusion Toggle
+
+* **Component**: `dbc.RadioItems`
+* **ID**: `halo_toggle`
+* **Function**: If toggled gas halo mass is included in the particle mass (so particles may appear slighly bigger).
+* **Options**:
+
+  * Include halo (`True`)
+  * Exclude halo (`False`)
+* **Default**: `True`
+
+### 4. Future Companions Toggle
+
+* **Component**: `dbc.RadioItems`
+* **ID**: `comp_toggle`
+* **Function**: Toggles the inclusion of companions that may only bind in the future.
+* **Options**:
+
+  * Include (`True`)
+  * Exclude (`False`)
+* **Default**: `True`
+
+### 5. Time Navigation
+
+* **Components**: `html.Button` (\u2190, \u2192), `dcc.Input`
+* **IDs**:
+
+  * Buttons: `step-back`, `step-forward`
+  * Input: `time-input`
+* **Function**: Navigate through the simulation time steps.
+
+  * `\u2190`: Step backward by 1 time unit.
+  * `\u2192`: Step forward by 1 time unit.
+  * Manual input: Type a specific time value directly.
+* **Time Range**: `0` to `490` (This is the snapshot number in the underlying starforge simulation--snapshots are spaced by 2.47e4 yr.
+* **Default**: ~10 snapshots before the last binary exchange purpotedly occurs, or the first snapshot the binary stars exist, whichever is bigger.
+To aid the viewer the axes will flash red whenever the exchange should be occuring.
+---
+
+## Plots
+
+### snapshot-graph (Left Plot)
+
+* Displays the spatial distribution of the binary and companions stars at the selected time.
+* Uses a fixed absolute scale set by `max-sep`.
+
+### snapshot-graph2 (Right Plot)
+
+* Similar to the left plot but scaled relative to the current binary separation (set by `max-sep-rel`).
+* Useful for zooming in and examining the immediate environment of the binary.
+
+Both plots are rendered side-by-side using a responsive grid layout.
+
+---
+
+## Tips and Usage Notes
+
+* Adjusting the binary index or time will automatically update both plots.
+* Use the scale controls to tailor the view depending on the size of the binary and surrounding features.
+* Disabling halos or future companions can clarify the view when looking for immediate bound structures.
+* Currently, the plots update with each control input—there is no "submit" button.
