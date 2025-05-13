@@ -31,6 +31,7 @@ cfg = load_config()
 pc = const.pc.cgs.value
 au = const.au.cgs.value
 unit = pc / au
+ioffset = 10
 ###############################################################################
 sink_cols = np.array(("t", "id", "px", "py", "pz", "vx", "vy", "vz", "h", "m"))
 sink_cols = np.concatenate((sink_cols, ["sys_id", "mtot", "sma", "ecc"]))
@@ -124,7 +125,7 @@ app.layout = html.Div(
                     type="number",
                     min=0,
                     max=490,
-                    value=422,
+                    value=max(int(ex_time_max[ex_index[0]]) - ioffset, my_data["fst"][ex_index[0]]),
                     step=1,
                     style={"width": "80px"},
                 ),
@@ -150,12 +151,12 @@ def plotly_snapshot(movie_dat):
     paths = np.array([path_lookup[str(pp)] for pp in movie_dat.ps])
     paths_T = np.transpose(paths, axes=(1, 0, 2))
 
+
     ##mcol of mtotcol should also affect the center of mass calculation...
     coms = get_com_winf(paths)
     delta = np.array(coms)
     if np.isinf(delta[movie_dat.time, 0]):
         return
-
     ##If max_sep_rel is specified then
     pos_list = np.array(
         [
@@ -180,7 +181,7 @@ def plotly_snapshot(movie_dat):
     zs = (paths_T[movie_dat.time, :, pzcol] - delta[movie_dat.time, 2]) * unit
     hover_texts = [
         f"{name}<br>Mass: {mass:.2f} M☉<br>x={xx:.2f} y={yy:.2f} z={zz:.2f}"
-        for name, mass, xx, yy, zz in zip(names, masses, xs, ys, zs)
+        for name, mass, xx, yy, zz, idx in zip(names, masses, xs, ys, zs, range(len(xs)))
     ]
     fig.add_trace(
         go.Scatter3d(
@@ -211,7 +212,7 @@ def plotly_snapshot(movie_dat):
         ys = (paths_extra_T[movie_dat.time, :, pycol] - delta[movie_dat.time, 1]) * unit
         zs = (paths_extra_T[movie_dat.time, :, pzcol] - delta[movie_dat.time, 2]) * unit
         hover_texts = [
-            f"{name}<br>Mass: {mass:.2f} M☉<br>x={xx:.2f} y={yy:.2f} z={zz:.2f}"
+            f"{name}<br>Mass: {mass:.2f} M☉<br>x={xx:.2f} y={yy:.2f} z={zz:.2f} d0={delta[movie_dat.time, 0]:.2f} d1={delta[movie_dat.time, 1]:.2f} d2={delta[movie_dat.time, 2]:.2f}"
             for name, mass, xx, yy, zz in zip(names, masses, xs, ys, zs)
         ]
         # hover_texts = [f"{name}<br>Mass: {mass:.2f} M☉" for name, mass in zip(names, masses)]
@@ -237,7 +238,6 @@ def plotly_snapshot(movie_dat):
 
     # Current companions (filled edge)
     if len(movie_dat.comps_curr) > 0:
-        print(movie_dat.comps_curr)
         paths_curr = np.array([path_lookup[str(pp)] for pp in movie_dat.comps_curr])
         paths_curr_T = np.transpose(paths_curr, axes=(1, 0, 2))
 
@@ -422,7 +422,7 @@ def update_figure(
     elif triggered_id == "step-forward":
         new_t = min(current_value + 1, last_star_snap)
     elif triggered_id == "bin-input":
-        new_t = max(int(ex_time_max[tmp_bin_idx]) - 10, my_data["fst"][tmp_bin_idx])
+        new_t = max(int(ex_time_max[tmp_bin_idx]) - ioffset, my_data["fst"][tmp_bin_idx])
         # new_t = max(int(my_data["init_bound_snaps"][tmp_bin_idx]) - 10, my_data["fst"][tmp_bin_idx])
     else:
         new_t = current_value

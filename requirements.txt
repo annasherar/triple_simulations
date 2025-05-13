@@ -7,3 +7,4 @@ astropy
 omegaconf
 matplotlib
 pyarrow
+dvc
