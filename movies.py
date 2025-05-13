@@ -475,8 +475,6 @@ def update_figure(
     last_star_snap = min(
         int(bin_sel["tval"].iloc[-1]) + 2, int(my_data["end_stars"][tmp_bin_idx])
     )
-    ##What was the point of this???
-    # last_star_snap = min(int(lookup_dict[ps[0]][0, -1]), last_star_snap)
     first_star_snap = min(lookup_dict[ps[0]][0, 0], int(lookup_dict[ps[1]][0, 0]))
     ##Getting only persistent companions
 
@@ -510,6 +508,7 @@ def update_figure(
         for ii in range(len(annotations1))
     ]
 
+    ##Logic for click forward and click back
     ctx = dash.callback_context
     triggered_id = ctx.triggered[0]["prop_id"].split(".")[0]
 
@@ -519,7 +518,6 @@ def update_figure(
         new_t = min(current_value + 1, last_star_snap)
     elif triggered_id == "bin-input":
         new_t = max(int(ex_time_max[tmp_bin_idx]) - ioffset, my_data["fst"][tmp_bin_idx])
-        # new_t = max(int(my_data["init_bound_snaps"][tmp_bin_idx]) - 10, my_data["fst"][tmp_bin_idx])
     else:
         new_t = current_value
 
