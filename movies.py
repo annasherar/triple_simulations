@@ -99,7 +99,7 @@ app.layout = dbc.Container([
                     dcc.Input(id="max-sep", type="number", value=10000, className="form-control mb-3"),
 
                     dbc.Label("Relative Plot Scale"),
-                    dcc.Input(id="max-sep-rel", type="number", value=5, className="form-control mb-3"),
+                    dcc.Input(id="max-sep-rel", type="number", value=3, className="form-control mb-3"),
 
                     html.Hr(),
 
@@ -256,7 +256,7 @@ def plotly_snapshot(movie_dat):
     ##If max_sep_rel is specified then
     pos_list = np.array(
         [
-            paths[tmp, movie_dat.time, pxcol : pxcol + 2]
+            paths[tmp, movie_dat.time, pxcol : pzcol + 1]
             for tmp in range(len(movie_dat.ps))
         ]
     )
@@ -268,7 +268,7 @@ def plotly_snapshot(movie_dat):
         and ~(np.any(np.isinf(pos_list[:, 0])))
     ):
         max_sep_b = movie_dat.max_sep_rel * max_pairwise_dist(pos_list) * unit
-
+    print(max_sep_b)
     ##Can refactor much of this code into its own function!!!
     names = [f"Star {sid}" for sid in movie_dat.ps]
     masses = paths_T[movie_dat.time, :, size_col]
