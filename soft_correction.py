@@ -137,32 +137,32 @@ def corr_pipeline(ex_group):
     return flag
 
 
-def corr_pipeline_ck(ex_group):
-    flag = False
-    if len(ex_group) > 3:
-        return flag
-    n_soft = 0
-    soft_idx1 = 0
-    soft_idx2 = 0
-    for ii in range(len(ex_group)):
-        for jj in range(ii + 1, len(ex_group)):
-            h = max(ex_group.iloc[ii]["hcol"], ex_group.iloc[jj]["hcol"])
-            sep = np.linalg.norm(ex_group.iloc[ii][["x", "y", "z"]] - ex_group.iloc[jj][["x", "y", "z"]])
-            if sep < h:
-                n_soft += 1
-            soft_idx1 = ii
-            soft_idx2 = jj
-    if n_soft == 1:
-        row1 = ex_group.iloc[soft_idx1]
-        row2 = ex_group.iloc[soft_idx2]
-        X1, X2, V1, V2, a, e, pi, omega, zi = fix_binary(row1[["x", "y", "z"]].to_numpy(), row2[["x", "y", "z"]].to_numpy(), row1[["vx", "vy", "vz"]].to_numpy(), row2[["vx", "vy", "vz"]].to_numpy(), row1["mcol"], row2["mcol"])
-        row1[["x", "y", "z"]] = X1 
-        row1[["vx", "vy", "vz"]] = V1
-        row2[["x", "y", "z"]] = X2
-        row2[["vx", "vy", "vz"]] = V2
-        ex_group.iloc[soft_idx1] = row1
-        ex_group.iloc[soft_idx2] = row2
-        if a > 0:
-            flag = True
+# def corr_pipeline_ck(ex_group):
+#     flag = False
+#     if len(ex_group) > 3:
+#         return flag
+#     n_soft = 0
+#     soft_idx1 = 0
+#     soft_idx2 = 0
+#     for ii in range(len(ex_group)):
+#         for jj in range(ii + 1, len(ex_group)):
+#             h = max(ex_group.iloc[ii]["hcol"], ex_group.iloc[jj]["hcol"])
+#             sep = np.linalg.norm(ex_group.iloc[ii][["x", "y", "z"]] - ex_group.iloc[jj][["x", "y", "z"]])
+#             if sep < h:
+#                 n_soft += 1
+#             soft_idx1 = ii
+#             soft_idx2 = jj
+#     if n_soft == 1:
+#         row1 = ex_group.iloc[soft_idx1]
+#         row2 = ex_group.iloc[soft_idx2]
+#         X1, X2, V1, V2, a, e, pi, omega, zi = fix_binary(row1[["x", "y", "z"]].to_numpy(), row2[["x", "y", "z"]].to_numpy(), row1[["vx", "vy", "vz"]].to_numpy(), row2[["vx", "vy", "vz"]].to_numpy(), row1["mcol"], row2["mcol"])
+#         row1[["x", "y", "z"]] = X1 
+#         row1[["vx", "vy", "vz"]] = V1
+#         row2[["x", "y", "z"]] = X2
+#         row2[["vx", "vy", "vz"]] = V2
+#         ex_group.iloc[soft_idx1] = row1
+#         ex_group.iloc[soft_idx2] = row2
+#         if a > 0:
+#             flag = True
 
-    return X1, X2, V1, V2, row1["mcol"], row2["mcol"], a, e, pi, omega, zi, flag
+#     return X1, X2, V1, V2, row1["mcol"], row2["mcol"], a, e, pi, omega, zi, flag
