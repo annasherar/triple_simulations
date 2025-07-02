@@ -26,9 +26,8 @@ from movie_preamble import (comps_dict, ex_index, ex_time_max, ex_time_max_end,
 ##[GET STARTED ON REQUIREMENTS AND README...NEED REQUIREMENTS FOR DATA FILE...]
 ##[Add N-body data and do basic sanity checks...Add orbital data too]
 ##First priority: IS TO GET SELF CONTAINED USABLE CODE.
-
+print(len(ex_index))
 cfg = load_config()
-
 pc = const.pc.cgs.value
 au = const.au.cgs.value
 unit = pc / au
@@ -101,6 +100,12 @@ app.layout = dbc.Container([
                     dbc.Label("Relative Plot Scale"),
                     dcc.Input(id="max-sep-rel", type="number", value=3, className="form-control mb-3"),
 
+                    dbc.Label("id1"),
+                    dcc.Input(id="id1", type="number", value=-1, className="form-control mb-3"),
+
+                    dbc.Label("id2"),
+                    dcc.Input(id="id2", type="number", value=-1, className="form-control mb-3"),
+
                     html.Hr(),
 
                     dbc.Label("Halo Particles"),
@@ -124,7 +129,17 @@ app.layout = dbc.Container([
                         ],
                         value=True,
                         inline=True
-                    )
+                    ),
+                    # dbc.Label("Exchange candidate only?"),
+                    # dbc.RadioItems(
+                    #     id="ex_toggle",
+                    #     options=[
+                    #         {"label": "Yes", "value": True},
+                    #         {"label": "No", "value": False}
+                    #     ],
+                    #     value=True,
+                    #     inline=True
+                    # ),
                 ])
             ])
         ], width=3),
@@ -446,6 +461,8 @@ def plotly_snapshot(movie_dat):
     Input("time-input", "value"),
     Input("max-sep", "value"),
     Input("max-sep-rel", "value"),
+    Input("id1", "value"),
+    Input("id2", "value"),
     Input("halo_toggle", "value"),
     Input("comp_toggle", "value"),
     State("time-input", "value"),
@@ -457,19 +474,27 @@ def update_figure(
     input_value,
     max_sep,
     max_sep_rel,
+    id1,
+    id2,
     halo_toggle,
     comp_toggle,
     current_value,
 ):
-    ##Only looking at subset of exchange binaries for now
-    ##TO DO: Develop ability to look at all binaries.
-    tmp_bin_idx = ex_index[bin_input]
-    # tmp_bin_idx = bin_input
-    my_bin = my_data["bin_ids"][tmp_bin_idx]
+    ##In progress -- get ability to look at arbitrary binaries....
+    if (id1 > 0 and id2 > 0):
+        bset = {id1, id2}
+        tmp_bin_idx = np.where(my_data["bin_ids"]==bset)[0][0]
+        my_bin = my_data["bin_ids"][tmp_bin_idx]
+    else:
+        tmp_bin_idx = ex_index[bin_input]
+        my_bin = my_data["bin_ids"][tmp_bin_idx]
+
     # print(my_bin)
     ps = list(my_bin)
     ps[0] = int(ps[0])
     ps[1] = int(ps[1])
+    ##We will get errors here is the selected binary is not persistent, since high_df has already filtered non-persistent systems
+    ##Annoying, but not a big deal(!!!)
     bin_sel = get_bound_snaps_adjust(ps, high_df)
 
     last_star_snap = min(
@@ -482,8 +507,8 @@ def update_figure(
     c2 = comps_dict["comps_b_ids_flat"][tmp_bin_idx]
     times1 = comps_dict["comps_a_times"][tmp_bin_idx]
     times2 = comps_dict["comps_b_times"][tmp_bin_idx]
-    hiers1 = comps_dict["comps_a_ids"][tmp_bin_idx]
-    hiers2 = comps_dict["comp_b_ids"][tmp_bin_idx]
+    hiers1 = np.array(comps_dict["comps_a_ids"][tmp_bin_idx])
+    hiers2 = np.array(comps_dict["comp_b_ids"][tmp_bin_idx])
 
     ##Get only quasi-persistent companions(!!!)
     comps = np.concatenate(

@@ -26,15 +26,24 @@ high_df = high_df.loc[
 tval = high_df.index.get_level_values("t")
 high_df["tval"] = tval
 
+smao_suffix = ""
+if cfg.smao=="False":
+    smao_suffix = "_smaoFalse"
+##Separate from the rest of the data hierarchy--because not spit by seeds?!
+##Should at least have some marking for smao!!!
 ex_time_max = np.load(
-    f"data/pmult_before_bin_{cfg.my_ft}{cfg.flat_suff}{cfg.contig_suff}.npz"
+    f"data/pmult_before_bin_{cfg.my_ft}{cfg.flat_suff}{cfg.contig_suff}{smao_suffix}.npz"
 )["ex_time_max"]
 ex_time_max_end = np.load(
-    f"data/pmult_before_bin_{cfg.my_ft}{cfg.flat_suff}{cfg.contig_suff}.npz"
+    f"data/pmult_before_bin_{cfg.my_ft}{cfg.flat_suff}{cfg.contig_suff}{smao_suffix}.npz"
 )["ex_time_max_end"]
 ex_filt = ~np.isinf(ex_time_max)
 ex_filt = ex_filt & my_data[f"quasi_filter{cfg.contig_suff}"]
 ex_index = np.where(ex_filt)[0]
 
-with open(f"data/companions{cfg.flat_suff}{cfg.contig_suff}.p", "rb") as ff:
+
+print(cfg)
+##Separate from the rest of the data hierarchy--because not spit by seeds?!
+##Should at least have some marking for smao!!!
+with open(f"data/companions{cfg.flat_suff}{cfg.contig_suff}{smao_suffix}.p", "rb") as ff:
     comps_dict = pickle.load(ff)
