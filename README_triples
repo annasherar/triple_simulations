@@ -1,0 +1,43 @@
+I have prepared a basic python example integrating 
+an unstable triple in REBOUND 
+(triple_exmple.py)
+
+The basic setup is three equal mass stars. There is an inner binary 
+and an outer tertiary, with 10 time the semi-major axis and 
+a highly eccentric orbit (e=0.9). The units are
+different from what we had before. In particular I am using the 
+dynamics convention of G=1. (You do not really need to be aware units for these experiments).
+
+Once you get the softened gravity implemented, you will need to do the following
+
+0. Install the required software. You will need to clone a git repository. 
+git clone -b perTweakNew https://github.com/alekseygenerozov/starforge_mult_search.git
+I would do this in the same directory where you have the existing code (starforge_mult_vis)
+
+You may to adjust your PYTHONPATH variable or sys.path to import the necessary software (see e.g. https://chrisyeh96.github.io/2017/08/08/definitive-guide-python-imports.html) Let me know if you need help with installing or importing the software.
+
+The software has to be made aware that we are using G=1 units (and not the starforge value). This is accomplished by having an override file, GN_override.txt in the directory you are running triple_exmple.py. This file should just have a single number, which is the value of G. 
+
+This software identifies stellar multiples from position, velocity, and mass data. I developped it for my last project, though we will not need 
+much of the functionality here. For our purposes here it is just a tool for analyzing the simulation (and figuring out when to stop the integration)
+
+1. Try running the triple example as is.
+It should produce some output like: end state end state [240.90096280091, 0.6901279787426159, 0.7511143456615614, 1.0, 0.0]
+(the interaction is chaotic so the output it may be different in your case.)
+
+This vector describes the end state of the interaction. In general, we expect the end state to be a binary and a single. The integration is stopped once the stars are in this state (with the additional requirements that the binary and the single are far apart, and they are moving away from one another). 
+
+This data is the time, sma, eccentricity, id1, and id2, where id1 and id2 are the indices of the stars in the binary. 
+
+2. Once this is successful you should try running the same example with your implementation of softened gravity. I recommend you make a copy of the python script for these experiments. 
+
+3. I would take the softening length to be 0.9. Presumably you will have a way of specifying this when you have implemented softening.
+
+4. You will have to modify the 4th argument in the line of code below: cl = cluster(ps, vs, ms, np.zeros(len(ps)), np.array([0, 1, 2]), np.zeros((3,3)), tides=False, sma_order=True). You should replace np.zeros(len(ps)) with the array of softening lengths your are using.
+
+5. The next step will be to do scattering experiments for a range of initial conditions. We will start by just varying the mean anomaly (M) in the following line of code: sim.add(m=1, a=1, M=np.pi / 4, e=1e-3) I am thinking we do 100 evenly spaced Ms between 0 and 2pi. 
+
+You should do these integration in both Newtonian and softened gravity.
+
+
+

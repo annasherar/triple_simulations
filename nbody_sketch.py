@@ -5,14 +5,17 @@ import numpy as np
 ic = pd.read_parquet("data/init_state_all.pq")
 ##End positions of binaries and initial companions.
 es = pd.read_parquet("data/end_state_all.pq")
+
+es3 = pd.read_parquet("data/end_state_all_time3.pq"); end_orbits = es3.groupby(es3.index).first()[["sma", "ecc"]] 
+breakpoint()
 ##Applying various filters: (1) Halo mass cannot change too much from start to end (2) No new companions can appear from start to end (3) No particle pairs are
 ##with softening length of each other.
-filt1 = ic["frac_halo_max"]<0.01
-filt2 = ic["nonew_comps"]>0
-filt_soft = (~ic["is_soft"].astype(bool)) & (~es["is_soft"].astype(bool))
-filt = filt1 & filt2 & filt_soft
-ic = ic.loc[filt]
-es = es.loc[filt]
+# filt1 = ic["frac_halo_max"]<0.01
+# filt2 = ic["nonew_comps"]>0
+# filt_soft = (~ic["is_soft"].astype(bool)) & (~es["is_soft"].astype(bool))
+# filt = filt1 & filt2 & filt_soft
+# ic = ic.loc[filt]
+# es = es.loc[filt]
 ###
 ##Sketch of method for Nbody integration
 ## (1) Iterate through indices Pandas dataframe
