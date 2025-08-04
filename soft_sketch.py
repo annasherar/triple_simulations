@@ -34,10 +34,9 @@ for trial in range(trials):
     ##and only one pair is softened. We will ignore all other encounters.
     ##We only want to apply the correction pipeline if we are integrating WITHOUT the softened gravitational force in REBOUND!!!
 
-    ##Same random rotation for all binaries(!)
+    ##Same random rotation for all binaries(!) ##TO DO REMOVE ROTATION.
     r = R.random()
     ##Initial conditions for Newtonian simulations(!)
-    ##Maybe add an additional structure to store additional data.
     flags = np.array([corr_pipeline(ic_for_newtonian.loc[ex1], aux_data1, r=r) for ex1 in ic_for_newtonian.index.unique()])
     idx_select = ic_for_newtonian.index.unique()[flags]
     ic_for_newtonian = ic_for_newtonian.loc[idx_select]
@@ -88,6 +87,10 @@ for trial in range(trials):
         ##THIS IS A BIT TRICKY, AND YOU MIGHT HAVE TO EXPERIMENT WITH THE INTEGRATION TIMES...
         #VALIDATION: VISUAL SANITY CHECKS ON ORBITS
 
+        ##MAKE 2 REBOUND SIMULATIONS. INITIALIZE WITH THE SOFTENED BINARY, AND RANDOMIZE THE ORBIT. 
+        ##THEN ADD 3RD STAR AND INTEGRATE FORWARD IN TIME...    
+
+        ##BRING IN THE SAME LOGIC AS IN THE TRIPLE_EXMPLE FOR SETTING THE INTEGRATION TIME
 
 
 
