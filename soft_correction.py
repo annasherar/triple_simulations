@@ -82,6 +82,7 @@ def fix_binary(X1, X2, V1, V2, m1, m2, eps):
     en_new = -GN * tot_mass / 2 / sma    
     ell_new = (GN * tot_mass * sma * (1 - e**2.))**.5
 
+    ##REFACTOR INTO ITS OWN FUNCTION!!!
     ##Original tangential and radial velocities
     Vrel_radial = np.dot(Xrel / sep, Vrel) * (Xrel / sep)
     Vrel_tangential = Vrel - Vrel_radial
@@ -100,6 +101,41 @@ def fix_binary(X1, X2, V1, V2, m1, m2, eps):
     V2 = V1 - Vrel
 
     return X1, X2, V1, V2, sma, e
+
+def from_keplerian_simplified(X1, X2, V1, V2, m1, m2, sma, e, eps):
+    Vrel = V1 - V2
+    Xrel = X1 - X2
+    sep = np.linalg.norm(Xrel)
+    tot_mass = m1 + m2
+
+    def Phi(r, eps):
+        return -GN * tot_mass / (r + eps)
+
+    rp = sma * (1 - e)
+    ra = sma * (1 + e)
+    ell_new = np.sqrt((Phi(rp, eps) - Phi(ra, eps)) / ((1 / 2 / ra) - (1 / 2 / rp)))
+    en_new = ell_new**2. / (2. * ra) + Phi(ra, eps)
+
+    ##REFACTOR INTO ITS OWN FUNCTION!!!
+    ##Original tangential and radial velocities
+    Vrel_radial = np.dot(Xrel / sep, Vrel) * (Xrel / sep)
+    Vrel_tangential = Vrel - Vrel_radial
+    ##Computing the new tangential and radial relative velocities...
+    Vrel_tangential_new_magnitude = ell_new / sep
+    Vrel_tangential = Vrel_tangential / np.linalg.norm(Vrel_tangential) * Vrel_tangential_new_magnitude
+    ##Radial component of relative velocity
+    Vrel_new_magnitude = (2. * (en_new  + GN * tot_mass / sep))**.5
+    Vrel_radial_new_magnitude = (Vrel_new_magnitude**2. - Vrel_tangential_new_magnitude**2.)**.5
+    Vrel_radial = Vrel_radial / np.linalg.norm(Vrel_radial) * Vrel_radial_new_magnitude
+    ##New total relative velocity
+    Vrel = Vrel_tangential + Vrel_radial
+    ##New individual stellar velocities
+    Vcm = (V1 * m1 + V2 * m2)/ (m1 + m2)
+    V1 = Vcm + m2*Vrel / tot_mass
+    V2 = V1 - Vrel
+
+    return X1, X2, V1, V2, sma, e
+
 
 # def fix_binary(X1,X2,V1,V2,m1,m2,eps):
 #     ##Calculate the apocenter and pericenter of the orbit, accounting for softening
