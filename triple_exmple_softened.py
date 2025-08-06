@@ -1,10 +1,10 @@
-import numpy as np
 
+import numpy as np
 import rebound 
 import time
 
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
-import webbrowser
+from softened_orbit_analysis import get_apo_softened, get_peri_softened
 
 def ForceKernel(r, h):
     """
@@ -116,10 +116,20 @@ for loop in range(integration_loops):
     current_systems = get_state(sim)
     finished = is_finished(current_systems, thres=30)
     if finished:
-        current_orbits = current_systems[1].orbits[0]
+        binary = current_systems[1]
+        current_orbits = binary.orbits[0]
+        ##Getting orbits in softened potential the right way
+        relative_position = np.diff(binary.sub_pos, axis=0)[0]
+        relative_velocity = np.diff(binary.sub_vel, axis=0)[0]
+        rp = get_peri_softened(relative_position[0], relative_position[1], relative_position[2], 
+                          relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
+        ra = get_apo_softened(relative_position[0], relative_position[1], relative_position[2], 
+                    relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
+        sma = 0.5 * (rp + ra) 
+        ecc = 1 - rp / sma
         ##Have to store this somewhere for each initial condition...
         ##Need to use our more accurate method to calculate the orbits here...
-        end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4]]
+        end_state = [sim.t, sma, ecc, current_orbits[-3], current_orbits[-4]]
         break
     # finished = is_finished(current_state)
     # finished == (i) binary and single (ii) moving away from each other (iii) separation of at least 30[?]
@@ -132,3 +142,16 @@ print("end state", end_state)
 # print(orbs[0].a)
 # breakpoint()
 
+###Code used for validation -- not necessary(!)
+# max_sep = 0
+# min_sep = np.inf
+# for ii in range(1000):
+#     sim.integrate(sim.t + 0.001  * 10. * np.pi)
+#     sep_bin = np.linalg.norm(np.array(sim.particles[int(end_state[-2])].xyz) - np.array(sim.particles[int(end_state[-1])].xyz))
+#     if sep_bin < min_sep:
+#         min_sep = sep_bin
+#     if sep_bin > max_sep:
+#         max_sep = sep_bin
+
+# print((min_sep - rp) / rp, min_sep, rp)
+# print((max_sep - ra)/ ra, max_sep, ra)
