@@ -30,14 +30,13 @@ This vector describes the end state of the interaction. In general, we expect th
 This data is the time, sma, eccentricity, id1, and id2, where id1 and id2 are the indices of the stars in the binary. 
 
 2. Once this is successful you should try running the same example with  softened gravity. I have set up a copy of the code, where this can be done with (triple_exmple_softened.py). 
-Currently the end_state  [470.3304511827389, 0.8037914672511562, 0.09002472491231155, 1.0, 0.0], but the orbital elements are not estimated accurately in softened gravity, and must be updated.
+Currently the end_state  end state [470.3304511827389, 0.806166297528525, 0.08681319670822474, 1.0, 0.0]
 
 3. I would take the softening length to be 0.9. We will tke this as a fixed parameter for now.
 
 4. Your task will be to do scattering experiments for a range of initial conditions. We will start by just varying the mean anomaly (M) in the following line of code: sim.add(m=1, a=1, M=np.pi / 4, e=1e-3) I am thinking we do 100 evenly spaced Ms between 0 and 2pi. 
 You should do these integration in both Newtonian and softened gravity. Currently I just print the end result, but you will have to store the results (perhaps in a Pandas dataframe). It may be some integrations never finish -- in such case you I recommend putting "placeholder" row in the results (e.g. 5 infinities--you can use np.inf).
 
-I need to adjust the code slight to accurately compute orbital elements in the softened regime, but I think you can work do the integrations with the existing code, and then update the results when I finish.
 
 5. The code produces a WebGL visualization here: http://localhost:1236. This is useful for visualizing individual runs easily. But if this gives you trouble, know that is not necessary for the integration, and can be removed. The time.sleep commands make the visualization slow enough that you can easily see it (and these can also be removed)
 
