@@ -22,22 +22,24 @@ This software identifies stellar multiples from position, velocity, and mass dat
 much of the functionality here. For our purposes here it is just a tool for analyzing the simulation (and figuring out when to stop the integration)
 
 1. Try running the triple example as is.
-It should produce some output like: end state end state [240.90096280091, 0.6901279787426159, 0.7511143456615614, 1.0, 0.0]
+It should produce some output like: end state end state [240.90096280091262, 0.6901279787724379, 0.7511143457453794, 1.0, 0.0]
 (the interaction is chaotic so the output it may be different in your case.)
 
-This vector describes the end state of the interaction. In general, we expect the end state to be a binary and a single. The integration is stopped once the stars are in this state (with the additional requirements that the binary and the single are far apart, and they are moving away from one another). 
+This vector describes the end state of the interaction. In general, we expect the end state to be a binary and a single. The integration is stopped once the stars are in this state (with the additional requirements that the binary and the single are far apart, and they are moving away from one another). There is also a tidal criterion applied within the multiple idenitification
 
 This data is the time, sma, eccentricity, id1, and id2, where id1 and id2 are the indices of the stars in the binary. 
 
-2. Once this is successful you should try running the same example with your implementation of softened gravity. I recommend you make a copy of the python script for these experiments. 
+2. Once this is successful you should try running the same example with  softened gravity. I have set up a copy of the code, where this can be done with (triple_exmple_softened.py). 
+Currently the end_state  [470.3304511827389, 0.8037914672511562, 0.09002472491231155, 1.0, 0.0], but the orbital elements are not estimated accurately in softened gravity, and must be updated.
 
-3. I would take the softening length to be 0.9. Presumably you will have a way of specifying this when you have implemented softening.
+3. I would take the softening length to be 0.9. We will tke this as a fixed parameter for now.
 
-4. You will have to modify the 4th argument in the line of code below: cl = cluster(ps, vs, ms, np.zeros(len(ps)), np.array([0, 1, 2]), np.zeros((3,3)), tides=False, sma_order=True). You should replace np.zeros(len(ps)) with the array of softening lengths your are using.
+4. Your task will be to do scattering experiments for a range of initial conditions. We will start by just varying the mean anomaly (M) in the following line of code: sim.add(m=1, a=1, M=np.pi / 4, e=1e-3) I am thinking we do 100 evenly spaced Ms between 0 and 2pi. 
+You should do these integration in both Newtonian and softened gravity. Currently I just print the end result, but you will have to store the results (perhaps in a Pandas dataframe). It may be some integrations never finish -- in such case you I recommend putting "placeholder" row in the results (e.g. 5 infinities--you can use np.inf).
 
-5. The next step will be to do scattering experiments for a range of initial conditions. We will start by just varying the mean anomaly (M) in the following line of code: sim.add(m=1, a=1, M=np.pi / 4, e=1e-3) I am thinking we do 100 evenly spaced Ms between 0 and 2pi. 
+I need to adjust the code slight to accurately compute orbital elements in the softened regime, but I think you can work do the integrations with the existing code, and then update the results when I finish.
 
-You should do these integration in both Newtonian and softened gravity.
+5. The code produces a WebGL visualization here: http://localhost:1236. This is useful for visualizing individual runs easily. But if this gives you trouble, know that is not necessary for the integration, and can be removed. The time.sleep commands make the visualization slow enough that you can easily see it (and these can also be removed)
 
 
 

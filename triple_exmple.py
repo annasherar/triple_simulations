@@ -3,16 +3,24 @@ import numpy as np
 import rebound 
 import time
 
-from starforge_mult_search.code.find_multiples_new2 import cluster
+from starforge_mult_search.code.find_multiples_new2 import cluster, system
 import webbrowser
 
 def get_state(sim):
+    ##Trick to synchronize the accelerations 
+    ##Is there a way to force the accelerations to be recomputed??
+    sim.integrate(sim.t + 1e-15 * sim.t)
+    accel1 = np.array((sim.particles[0].ax, sim.particles[0].ay, sim.particles[0].az))
+    accel2 = np.array((sim.particles[1].ax, sim.particles[1].ay, sim.particles[1].az))
+    accel3 = np.array((sim.particles[2].ax, sim.particles[2].ay, sim.particles[2].az))
     ps = np.array([pp.xyz for pp in sim.particles])
     vs = np.array([pp.vxyz for pp in sim.particles])
     ms = np.array([pp.m for pp in sim.particles])
 
     ##You will have to adjust the 4th argument when you have softening(!)
-    cl = cluster(ps, vs, ms, np.zeros(len(ps)), np.array([0, 1, 2]), np.zeros((3,3)), tides=False, sma_order=True)
+    ##Systems are only grouped if we have 
+    cl = cluster(ps, vs, ms, np.zeros(len(ps)), np.array([0, 1, 2]), np.array((accel1, accel2, accel3)), tides=True, sma_order=True, tides_factor=0.01)
+
     return cl.systems
 
 def is_finished(current_systems, thres=30):
@@ -60,7 +68,7 @@ sim.save_to_file("archive.bin", interval=loop_time, delete_file=True)
 time.sleep(10)
 for loop in range(integration_loops):
     sim.integrate(sim.t + loop_time)
-    # time.sleep(0.05)
+    time.sleep(0.05)
     current_systems = get_state(sim)
     finished = is_finished(current_systems, thres=30)
     if finished:
@@ -70,6 +78,7 @@ for loop in range(integration_loops):
         break
     # finished = is_finished(current_state)
     # finished == (i) binary and single (ii) moving away from each other (iii) separation of at least 30[?]
+##We should have a placeholder in canse the integration is never finished...
 print("end state", end_state)
 
 # print(current_systems[1].orbits[:,0])

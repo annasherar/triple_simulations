@@ -169,27 +169,6 @@ for trial in tqdm.tqdm(range(trials)):
         binary_star2_h = ic_row.iloc[int(aux_row[3])]["hcol"]
         tertiary_star_h = ic_row.iloc[unchanged_index]["hcol"]
 
-        # ##All the below functionality could be folded into its own function
-            # binary_com = (binary_star1_mass * binary_star1_xyz_newton + binary_star2_mass * binary_star2_xyz_newton) / (binary_star1_mass + binary_star2_mass)
-        # binary_vcom = (binary_star1_mass * binary_star1_vxyz_newton + binary_star2_mass * binary_star2_vxyz_newton) / (binary_star1_mass + binary_star2_mass)
-        # sim_Newton = rebound.Simulation()
-        # sim_Newton.G = GN
-        # sim_Newton.add(m=binary_star1_mass, x=binary_star1_xyz_newton[0], y=binary_star1_xyz_newton[1], z=binary_star1_xyz_newton[2], 
-        #                vx=binary_star1_vxyz_newton[0], vy=binary_star1_vxyz_newton[1], vz=binary_star1_vxyz_newton[2])
-        # sim_Newton.add(m=binary_star2_mass, x=binary_star2_xyz_newton[0], y=binary_star2_xyz_newton[1], z=binary_star2_xyz_newton[2],
-        #                 vx=binary_star2_vxyz_newton[0], vy=binary_star2_vxyz_newton[1], vz=binary_star2_vxyz_newton[2])
-        # sim_Newton.move_com()
-        # orbs = sim_Newton.calculate_orbit(primary=sim_Newton.particles[0])
-        # sma, e = orbs[0].a, orbs[0].e
-        # ##Randomizing phase 
-        # sim_Newton.integrate(np.random.uniform(0,1) * orbs[0].P)
-        # ##Adjusting binary star positions
-        # ########################################
-        # binary_star1_xyz_newton = binary_com + np.array(sim_Newton.particles[0].xyz)
-        # binary_star1_vxyz_newton = binary_vcom + np.array(sim_Newton.particles[0].vxyz)
-        # binary_star2_xyz_newton = binary_com + np.array(sim_Newton.particles[1].xyz)
-        # binary_star2_vxyz_newton = binary_vcom + np.array(sim_Newton.particles[1].vxyz)
-
         ##Randomizing binary phase for Newtonian simulation so that softening can be set to 0(!)
         scrambled_positions = randomize_binary_phase(binary_star1_xyz_newton, binary_star2_xyz_newton, binary_star1_vxyz_newton, binary_star2_vxyz_newton, 
                                binary_star1_mass, binary_star2_mass, 0, 0)
