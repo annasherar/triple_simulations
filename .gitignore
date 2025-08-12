@@ -1,3 +1,9 @@
 /data
 __pycache__
 .idea
+.ipynb_checkpoints/
+.vscode/
+*.pq
+*.pdf
+*.html
+archives/

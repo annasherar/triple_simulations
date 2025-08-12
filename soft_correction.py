@@ -1,12 +1,9 @@
 import numpy as np
-
 import rebound
 import pytreegrav
 ##Include the necessary code below to get rid of these imports!
 from starforge_mult_search.analysis.analyze_stack import get_peri_softened_numba, get_apo_softened_numba
 import cgs_const as cgs
-
-
 
 GN = 4.301e3
 
@@ -267,7 +264,6 @@ def corr_pipeline(ex_group, aux_data, r=None, rot_only=False):
         ex_group.iloc[soft_idx2] = row2
         if a > 0:
             flag = True
-
     aux_data.append(aux_row)
     return flag
 
@@ -301,3 +297,4 @@ def corr_pipeline(ex_group, aux_data, r=None, rot_only=False):
 #             flag = True
 
 #     return X1, X2, V1, V2, row1["mcol"], row2["mcol"], a, e, pi, omega, zi, flag
+

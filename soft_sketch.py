@@ -291,3 +291,119 @@ for trial in tqdm.tqdm(range(trials)):
         
 
         
+=======
+ic_og = ic.copy()
+
+##Initializing list rows
+binary_ids = []
+trial_id = []
+e_initial = []
+pi_initial = []
+omega_initial = []
+incl_initial = []
+a_expected = []
+a_rebound = []
+e_expected = []
+e_rebound = []
+
+##You can play around with the trials here...
+trials = 20
+for trial in range(trials):
+	##Reset after every trial...
+	ic = ic_og 
+	##Apply correction for softened binaries.
+	##To keep things simple, we will only consider exchanges where there are a total of three stars,
+	##and only one pair is softened. We will ignore all other encounters.
+	#flags = [corr_pipeline(ic.loc[ex1]) for ex1 in ic.index.unique()]
+	flag_vals = []
+	ecc_vals = []
+	pi_vals = []
+	omega_vals = []
+	zi_vals = []
+
+	ex_ids = list(ic.index.unique())
+	vals_map = {
+			ex_id: (e_val, pi_val, om_val, zi_val, flg)
+			for ex_id, e_val, pi_val, om_val, zi_val, flg in zip(
+					ex_ids, ecc_vals, pi_vals, omega_vals, zi_vals, flag_vals
+			)
+	}
+
+	idx_select = np.array(ex_ids)[flag_vals]
+	ic = ic.loc[idx_select]
+	es = es.loc[idx_select]
+
+
+	for ex1 in ic.index.unique():
+		flag, e_val, pi_val, omega_val, zi_val = corr_pipeline(ic.loc[ex1])
+		flag_vals.append(flag)
+		ecc_vals.append(e_val)
+		pi_vals.append(pi_val)
+		omega_vals.append(omega_val)
+		zi_vals.append(zi_val)
+
+
+	###YOUR NORMAL INTEGRATION PIPELINE WOULD GO HERE!
+	##Printing progress
+	print(f"Processing trial {trial}")
+	for binary_id, group in ic.groupby(ic.index, sort=False):
+
+		##Start simulation
+		sim = rebound.Simulation()
+		##Reassign Newton's Constant
+		sim.G = 4.301e3
+		##Add variables       
+		for ii in range(len(group)):
+				sim.add(m=group.iloc[ii]["mcol"], x=group.iloc[ii]["x"], y=group.iloc[ii]["y"], z=group.iloc[ii]["z"], vx=group.iloc[ii]["vx"], vy=group.iloc[ii]["vy"], vz=group.iloc[ii]["vz"])
+		##Moves particles to center of mass
+		sim.move_to_com()
+		##Time conversion
+		t_end = (es.loc[binary_id].iloc[0]["t"]-ic.loc[binary_id].iloc[0]["t"])*2.526e-05
+		##Integration
+		sim.integrate(t_end)
+		#Initializing orbital elements
+		orb = sim.particles[1].orbit(primary=sim.particles[0])
+		##Appending values to table
+		binary_ids.append(binary_id)
+		a_rebound.append(orb.a)
+		e_rebound.append(orb.e)
+		trial_id.append(trial)
+		##Appending initial conditions to table
+		idx = list(idx_select).index(binary_id)
+		ecc_val, pi_val, om_val, zi_val, _ = vals_map[binary_id]
+		e_initial.append(ecc_val)
+		pi_initial.append(pi_val)
+		omega_initial.append(omega_vals)
+		incl_initial.append(zi_vals)
+		print(f"{ecc_vals, pi_vals, omega_vals, zi_vals}")
+
+##Creating dataframe
+df = pd.DataFrame({
+	"trial_id": trial_id,
+	"binary_id": binary_ids,
+	"a_rebound": a_rebound,
+	"e_rebound": e_rebound,
+	"e_initial": e_initial,
+	"pi_initial": pi_initial,
+	"omega_initial": omega_initial,
+	"incl_initial": incl_initial
+})
+
+##Convert dataframe to parquet file
+df.to_parquet('C:/Users/Admin/starforge_mult_vis/data/soft_trials.pq')
+
+
+###
+##Sketch of method for Nbody integration
+## (1) Iterate through indices Pandas dataframe
+# e.g. for index in ic.index:
+## (2) For each index: Add all corresponding rows to a REBOUND (or other Nbody?) simulation (keep units the same), AND SET NEWTONS CONSTANT TO 4.301E3 IN REBOUND TO MATCH STARFORGE.
+## use x, y, z, vx, vy, vz, and mcol for the position, velocity, and mass of each particle.
+## (3) Move to COM
+## (4) Integrate forward in time at least until the corresponding end state (that is the integration time show be the difference between t in ic and t in the es frame*).
+## (5) Compute the orbital elements of first two particles--NB the particles may actually be unbound...
+## (6) Compare to the orbital elements in end_state
+## (7) Double check energy and angular momentum conservation.
+
+##*You will have convert the simulation snapshot interval to a time in code units 1 snapshot = 2.47e4 yr ~ 2.526e-05 [CODE UNITS]
+
