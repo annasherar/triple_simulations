@@ -1,5 +1,6 @@
 import pandas as pd
-# import numpy as np
+import rebound
+import os
 import rebound
 
 ##Start positions of binaries and initial companions.
@@ -11,47 +12,65 @@ es3 = pd.read_parquet("data/end_state_all_time3.pq"); end_orbits = es3.groupby(e
 breakpoint()
 ##Applying various filters: (1) Halo mass cannot change too much from start to end (2) No new companions can appear from start to end (3) No particle pairs are
 ##with softening length of each other.
-<<<<<<< HEAD
-# filt1 = ic["frac_halo_max"]<0.01
-# filt2 = ic["nonew_comps"]>0
-# filt_soft = (~ic["is_soft"].astype(bool)) & (~es["is_soft"].astype(bool))
-# filt = filt1 & filt2 & filt_soft
-# ic = ic.loc[filt]
-# es = es.loc[filt]
+
+filt1 = ic["frac_halo_max"]<0.01
+filt2 = ic["nonew_comps"]>0
+filt_soft = (~ic["is_soft"].astype(bool)) & (~es["is_soft"].astype(bool))
+filt = filt1 & filt2 & filt_soft
+ic = ic.loc[filt]
+es = es.loc[filt]
+##Make archive directory, if exists nothing
+os.makedirs("archives", exist_ok=True)
+
+##Initializing list rows
+binary_ids = []
+a_expected = []
+a_rebound = []
+e_expected = []
+e_rebound = []
 
 for binary_id, group in ic.groupby(ic.index, sort=False):
-    ##Start simulation
-    sim = rebound.Simulation()
-    ##Reassign Newton's Constant
-    sim.G = 4.301e3
-    ##Add variables       
-    for ii in range(len(group)):
-            sim.add(m=group.iloc[ii]["mcol"], x=group.iloc[ii]["x"], y=group.iloc[ii]["y"], z=group.iloc[ii]["z"], vx=group.iloc[ii]["vx"], vy=group.iloc[ii]["vy"], vz=group.iloc[ii]["vz"])
-    ##Moves particles to center of momentum
-    sim.move_to_com()
-    #Time conversion
-    time = (es.loc[binary_id].iloc[0]["t"]-ic.loc[binary_id].iloc[0]["t"])*2.526e-05
-    ##Integration
-    sim.integrate(time)
+	##Start simulation
+	sim = rebound.Simulation()
+	##Reassign Newton's Constant
+	sim.G = 4.301e3
+	##Add variables       
+	for ii in range(len(group)):
+			sim.add(m=group.iloc[ii]["mcol"], x=group.iloc[ii]["x"], y=group.iloc[ii]["y"], z=group.iloc[ii]["z"], vx=group.iloc[ii]["vx"], vy=group.iloc[ii]["vy"], vz=group.iloc[ii]["vz"])
+	##Moves particles to center of mass
+	sim.move_to_com()
+	##Time conversion
+	t_end = (es.loc[binary_id].iloc[0]["t"]-ic.loc[binary_id].iloc[0]["t"])*2.526e-05*3
+	##Creating archive directory for IDs
+	nested_dir_path = f"archives/{binary_id}"
+	os.makedirs(nested_dir_path, exist_ok=True)
+	archive_name = os.path.join(nested_dir_path,f"{binary_id}.bin")
+	sim.save_to_file(archive_name, interval=t_end / 40, delete_file=True)
+	##Integration
+	sim.integrate(t_end)
+	#Initializing orbital elements
+	orb = sim.particles[1].orbit(primary=sim.particles[0])
+	##Selecting row
+	row = es.loc[binary_id].iloc[1]
+	##Appending values to table
+	binary_ids.append(binary_id)
+	a_expected.append(row["sma"])
+	a_rebound.append(orb.a)
+	e_expected.append(row["ecc"])
+	e_rebound.append(orb.e)
+   
+##Creating dataframe
+df = pd.DataFrame({
+	"binary_id": binary_ids,
+	"a_expected": a_expected,
+	"a_rebound": a_rebound,
+	"e_expected": e_expected,
+	"e_rebound": e_rebound
+})
 
-    orb = sim.particles[1].orbit(primary=sim.particles[0])
-    #print(orb.a, orb.e)
-    #o1 = sim.particles[0].orbit(primary=sim.particles[1]) 
-    #o2 = sim.particles[1].orbit(primary=sim.particles[0]) 
+##Convert dataframe to parquet file
+df.to_parquet('C:/Users/Admin/starforge_mult_vis/data/triple_time.pq')
 
-    print("Expected Semimajor axis =",es.loc[binary_id].iloc[1]["sma"],"Rebound Semimajor axis =",orb.a)
-    print("Expected Eccentricity = ",es.loc[binary_id].iloc[1]["ecc"], "Rebound Eccentricity =",orb.e)
-    print("Expected Distance = ",es.loc[binary_id].iloc[1]["bdist"], "Rebound Distance =",orb.d)
-
-    #print("Expected Semimajor axis =",es.loc[binary_id].iloc[1]["sma"],"Rebound Semimajor axis =",o1.a, "Rebound Semimajor axis =",o2.a)
-    #print("Expected Eccentricity = ",es.loc[binary_id].iloc[1]["ecc"], "Rebound Eccentricity =",o1.e, "Rebound Semimajor axis =",o2.a)
-    
-    #Visualization
-    sim.start_server(port=1234)
-    input("Server running at http://localhost:1234. Press Enter to stop.")
-
->>>>>>> 840c005 (N-body integration pass 1)
-###
 ##Sketch of method for Nbody integration
 ## (1) Iterate through indices Pandas dataframe
 # e.g. for index in ic.index:
