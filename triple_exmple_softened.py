@@ -7,6 +7,13 @@ from starforge_mult_search.code.find_multiples_new2 import cluster, system
 from softened_orbit_analysis import get_apo_softened, get_peri_softened
 import reboundx
 
+def heartbeat(sim_pointer):
+    # The function argument is a pointer to the simulation:
+    # Here we get its contents:
+    sim = sim_pointer.contents 
+    print(sim.t, sim.dt)
+    print(sim.particles[0].xyz, sim.particles[1].xyz, sim.particles[2].xyz)
+
 def ForceKernel(r, h):
     """
     Returns the quantity equivalent to (fraction of mass enclosed)/ r^3 for a cubic-spline mass distribution of compact support radius h. Used to calculate the softened gravitational force.
@@ -28,6 +35,7 @@ def ForceKernel(r, h):
             * hinv
         )
 softening_length = 0.9
+
 def get_state(sim):
     ##Trick to synchronize the accelerations
     ##Is there a way to force the accelerations to be recomputed??
@@ -42,6 +50,7 @@ def get_state(sim):
     ##Systems are only grouped if we have the tidal force < 0.01 times the internal force.
     cl = cluster(ps, vs, ms, np.ones(len(ps)) * softening_length, np.array([0, 1, 2]), np.array((accel1, accel2, accel3)), tides=True, sma_order=True, tides_factor=0.01)
     return cl.systems
+
 def is_finished(current_systems, thres=30):
     ##There should be two systems identified at the end of the integration: a binary and a single.
     if len(current_systems) != 2:
@@ -67,6 +76,9 @@ end_state_all = []
 M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
 for i, x in tqdm.tqdm(enumerate(M_values)):
     sim = rebound.Simulation()
+    ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
+    sim.softening = 1e-1
+    # sim.heartbeat = heartbeat
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
@@ -77,23 +89,6 @@ for i, x in tqdm.tqdm(enumerate(M_values)):
     orbs = sim.orbits()
     ps = sim.particles
     # ##SETTING UP SOFTENING
-    # def softened_force(reb_sim):
-    #     ##ii will be the target and jj will be the source particle.
-    #     for ii in range(len(ps)):
-    #         for jj in range(len(ps)):
-    #             ##If it is the same particle -- continue
-    #             if ii == jj:
-    #                 continue
-    #             sep = np.sqrt((ps[ii].x - ps[jj].x)**2 + (ps[ii].y - ps[jj].y)**2 + (ps[ii].z - ps[jj].z)**2)
-    #             sep_vector = ((ps[jj].x - ps[ii].x), (ps[jj].y - ps[ii].y), (ps[jj].z - ps[ii].z))
-    #             if sep < softening_length:
-    #                 accel_magnitude = reb_sim[0].G * ps[jj].m * ForceKernel(sep, softening_length)
-    #                 ##Trick to get the Newtonian force
-    #                 accel_newton = reb_sim[0].G * ps[jj].m * ForceKernel(sep, 0)
-    #                 sim.particles[ii].ax += (accel_magnitude - accel_newton) * sep_vector[0]
-    #                 sim.particles[ii].ay += (accel_magnitude - accel_newton) * sep_vector[1]
-    #                 sim.particles[ii].az += (accel_magnitude - accel_newton) * sep_vector[2]
-    # sim.additional_forces = softened_force
     rebx = reboundx.Extras(sim)
     softened_force = rebx.load_force("softened_force")
     rebx.add_force(softened_force)
@@ -136,27 +131,9 @@ for i, x in tqdm.tqdm(enumerate(M_values)):
             end_state = [float(x) for x in end_state]
             break
     end_state_all.append(end_state)
-    # finished = is_finished(current_state)
-    # finished == (i) binary and single (ii) moving away from each other (iii) separation of at least 30[?]
+    print(end_state)
 ##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
-# df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M"))
+df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M"))
 ##Convert dataframe to parquet file
-# df.to_parquet('softened_trials.pq')
-# print(current_systems[1].orbits[:,0])
-# print(current_systems[1].hierarchy)
-# orbs = sim.orbits()
-# print(orbs[0].a)
-# breakpoint()
-###Code used for validation -- not necessary(!)
-# max_sep = 0
-# min_sep = np.inf
-# for ii in range(1000):
-#     sim.integrate(sim.t + 0.001  * 10. * np.pi)
-#     sep_bin = np.linalg.norm(np.array(sim.particles[int(end_state[-2])].xyz) - np.array(sim.particles[int(end_state[-1])].xyz))
-#     if sep_bin < min_sep:
-#         min_sep = sep_bin
-#     if sep_bin > max_sep:
-#         max_sep = sep_bin
-# print((min_sep - rp) / rp, min_sep, rp)
-# print((max_sep - ra)/ ra, max_sep, ra)
+df.to_parquet('softened_trials.pq')
