@@ -2,7 +2,7 @@ import pandas as pd
 from collections import Counter
 
 ##End positions of binaries and initial companions.
-df = pd.read_parquet("data/newtonian_trials.pq")
+df = pd.read_parquet("softened_trials.pq")
 
 # stt = pd.read_parquet("data/end_state_all_time3.pq")
 
