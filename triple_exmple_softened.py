@@ -98,18 +98,27 @@ for i, x in tqdm.tqdm(enumerate(M_values)):
 
     sim.move_to_com()
     #Looping 100 times
-    integration_loops = 1000
+    #integration_loops = 1000
     loop_time = 0.1 * orbs[1].P
     sim.start_server(port=1236)
+    save_interval = loop_time
     ##Using simulation archive to save data -- will be used to generate a movie later(!)
-    sim.save_to_file("archive.bin", interval=loop_time, delete_file=True)
+    sim.save_to_file("archive.bin", interval=save_interval, delete_file=True)
     # sim.save_to_file("archive.bin", delete_file=True)
     #webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
     # time.sleep(10)
     end_state = [np.inf for ii in range(6)]
-    for loop in range(integration_loops):
+
+    calculation_start_time = time.time()
+    max_calculation_time = 60
+    max_simulation_time = np.inf
+    calculation_time = time.time() - calculation_start_time 
+    finished = False
+    while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
+        calculation_time = time.time() - calculation_start_time 
         # time.sleep(0.05)
+        end_state[0] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
         if finished:
@@ -129,7 +138,7 @@ for i, x in tqdm.tqdm(enumerate(M_values)):
             end_state = [sim.t, sma, ecc, current_orbits[-3], current_orbits[-4], x]
             ##Prevent float
             end_state = [float(x) for x in end_state]
-            break
+
     end_state_all.append(end_state)
     print(end_state)
 ##We should have a placeholder in canse the integration is never finished...
