@@ -2,9 +2,10 @@ import numpy as np
 
 import rebound 
 import time
-
+import pandas as pd
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
 import webbrowser
+import tqdm
 
 def get_state(sim):
     ##Trick to synchronize the accelerations 
@@ -46,40 +47,74 @@ def is_finished(current_systems, thres=30):
 ##FOR NOW just randomize the mean anomaly (0 to 2 pi) in this example (NB mean anomaly is not well-defined for a circular orbit...)
 ##Note rebound uses Jacobi coordinates, so that the 
 ##orbit of the outer triple is defined with respect to the 
-sim = rebound.Simulation()
-##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
-sim.add(m=1)
-##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-sim.add(m=1, a=1, M=np.pi / 4, e=1e-3)
-sim.add(m=1, a=10, e=0.9, M=np.pi)
-##Switch to com frame...
-sim.move_to_com()
-orbs = sim.orbits()
 
-#Looping 100 times
-integration_loops = 1000
-loop_time = 0.1 * orbs[1].P
-sim.start_server(port=1236)
+##Initializing list rows
+# M = []
+# t = []
+# semima = []
+# eccent = []
+# id1 = []
+# id2 = []
+end_state_all = []
 
-##Using simulation archive to save data -- will be used to generate a movie later(!)
-sim.save_to_file("archive.bin", interval=loop_time, delete_file=True)
-# sim.save_to_file("archive.bin", delete_file=True)
-# webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
-time.sleep(10)
-for loop in range(integration_loops):
-    sim.integrate(sim.t + loop_time)
-    time.sleep(0.05)
-    current_systems = get_state(sim)
-    finished = is_finished(current_systems, thres=30)
-    if finished:
-        current_orbits = current_systems[1].orbits[0]
-        ##Have to store this somewhere for each initial condition...
-        end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4]]
-        break
+##Defining mean anomaly
+M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
+
+for i, x in tqdm.tqdm(enumerate(M_values)):
+    sim = rebound.Simulation()
+    ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
+    sim.add(m=1)
+    ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
+    sim.add(m=1, a=1, M= x, e=1e-3)
+    sim.add(m=1, a=10, e=0.9, M=np.pi)
+    ##Switch to com frame...
+    sim.move_to_com()
+    orbs = sim.orbits()
+
+    #Looping 100 times
+    integration_loops = 1000
+    loop_time = 0.1 * orbs[1].P
+    # sim.start_server(port=1236)
+
+    ##Using simulation archive to save data -- will be used to generate a movie later(!)
+    sim.save_to_file("archive.bin", interval=loop_time, delete_file=True)
+    # sim.save_to_file("archive.bin", delete_file=True)
+    # webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
+    # time.sleep(10)
+
+    
+    end_state = [np.inf for ii in range(6)]
+    for loop in range(integration_loops):
+        sim.integrate(sim.t + loop_time)
+        # time.sleep(0.05)
+        current_systems = get_state(sim)
+        finished = is_finished(current_systems, thres=30)
+        if finished:
+            current_orbits = current_systems[1].orbits[0]
+            ##Have to store this somewhere for each initial condition...
+            end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4], x]
+            # M.append(x)
+            # t.append(sim.t)
+            # semima.append(sma)
+            # eccent.append(ecc)
+            # id1.append(current_orbits[-3])
+            # id2.append(current_orbits[-4])
+            end_state = [float(x) for x in end_state]
+            break
+    end_state_all.append(end_state)
     # finished = is_finished(current_state)
     # finished == (i) binary and single (ii) moving away from each other (iii) separation of at least 30[?]
 ##We should have a placeholder in canse the integration is never finished...
-print("end state", end_state)
+# if end_state is None:
+#     raise RuntimeError("Integration ended without meeting 'finished' condition. "
+#                        "Consider increasing total integration time or relaxing the threshold.")
+# else:
+
+##Creating dataframe
+df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M"))
+
+##Convert dataframe to parquet file
+df.to_parquet('C:/Users/Admin/starforge_mult_vis/data/newtonian_trials.pq')
 
 # print(current_systems[1].orbits[:,0])
 # print(current_systems[1].hierarchy)

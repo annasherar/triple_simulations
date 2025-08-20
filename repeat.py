@@ -2,24 +2,24 @@ import pandas as pd
 from collections import Counter
 
 ##End positions of binaries and initial companions.
-es = pd.read_parquet("data/end_state_all.pq")
+df = pd.read_parquet("data/newtonian_trials.pq")
 
-stt = pd.read_parquet("data/end_state_all_time3.pq")
+# stt = pd.read_parquet("data/end_state_all_time3.pq")
 
-df = pd.read_parquet("data/soft_trials.pq")
+# df = pd.read_parquet("data/soft_trials.pq")
 
-##Occurrences of all IDs
-id_counts = Counter(es["id"])
+# ##Occurrences of all IDs
+# id_counts = Counter(es["id"])
 
 
-## --------------------------- Total number of exchanges that have repeats ----------------------------------------
-binaries_with_repeats = set()
-for id_val, count in id_counts.items():
-    if count > 1:
-        binaries = es[es["id"] == id_val].index.unique()
-        binaries_with_repeats.update(binaries)
-        #print(f"ID {id_val} appears {count} times in binaries: {list(binaries)}")
-print(f"\nTotal number of unique binaries with repeated IDs: {len(binaries_with_repeats)}")
+# ## --------------------------- Total number of exchanges that have repeats ----------------------------------------
+# binaries_with_repeats = set()
+# for id_val, count in id_counts.items():
+#     if count > 1:
+#         binaries = es[es["id"] == id_val].index.unique()
+#         binaries_with_repeats.update(binaries)
+#         #print(f"ID {id_val} appears {count} times in binaries: {list(binaries)}")
+# print(f"\nTotal number of unique binaries with repeated IDs: {len(binaries_with_repeats)}")
 
 
 ## --------------------------------- Total number of IDs that repeat ----------------------------------------------

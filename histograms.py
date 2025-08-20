@@ -12,6 +12,8 @@ tt = pd.read_parquet("data/triple_time.pq")
 ## Triple time STARFORGE data
 stt = pd.read_parquet("data/end_state_all_time3.pq")
 
+nt = pd.read_parquet("data/newtonian_trials.pq")
+
 # ## Compute ratios
 ratio_ao = ot["a_rebound"] / ot["a_expected"]
 ratio_eo = ot["e_rebound"] / ot["e_expected"]
