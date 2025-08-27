@@ -81,44 +81,34 @@ for i, x in tqdm.tqdm(enumerate(M_values)):
     # sim.save_to_file("archive.bin", delete_file=True)
     # webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
     # time.sleep(10)
-
-    
     end_state = [np.inf for ii in range(6)]
-    for loop in range(integration_loops):
+
+    calculation_start_time = time.time()
+    max_calculation_time = 60
+    max_simulation_time = np.inf
+    calculation_time = time.time() - calculation_start_time 
+    finished = False
+    while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
+        calculation_time = time.time() - calculation_start_time 
         # time.sleep(0.05)
+        end_state[0] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
         if finished:
-            current_orbits = current_systems[1].orbits[0]
+            binary = current_systems[1]
+            current_orbits = binary.orbits[0]
+            current_systems = get_state(sim)
+            finished = is_finished(current_systems, thres=30)
             ##Have to store this somewhere for each initial condition...
             end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4], x]
-            # M.append(x)
-            # t.append(sim.t)
-            # semima.append(sma)
-            # eccent.append(ecc)
-            # id1.append(current_orbits[-3])
-            # id2.append(current_orbits[-4])
+            ##Prevent float
             end_state = [float(x) for x in end_state]
-            break
-    end_state_all.append(end_state)
-    # finished = is_finished(current_state)
-    # finished == (i) binary and single (ii) moving away from each other (iii) separation of at least 30[?]
-##We should have a placeholder in canse the integration is never finished...
-# if end_state is None:
-#     raise RuntimeError("Integration ended without meeting 'finished' condition. "
-#                        "Consider increasing total integration time or relaxing the threshold.")
-# else:
 
+    end_state_all.append(end_state)
+    print(end_state)
+##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
 df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M"))
-
 ##Convert dataframe to parquet file
-df.to_parquet('C:/Users/Admin/starforge_mult_vis/data/newtonian_trials.pq')
-
-# print(current_systems[1].orbits[:,0])
-# print(current_systems[1].hierarchy)
-# orbs = sim.orbits()
-# print(orbs[0].a)
-# breakpoint()
-
+df.to_parquet('/mnt/c/Users/Admin/starforge_mult_vis/data/newtonian_trials.pq')
