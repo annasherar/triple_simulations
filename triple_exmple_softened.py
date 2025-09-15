@@ -70,79 +70,92 @@ def is_finished(current_systems, thres=30):
 ##FOR NOW just randomize the mean anomaly (0 to 2 pi) in this example (NB mean anomaly is not well-defined for a circular orbit...)
 ##Note rebound uses Jacobi coordinates, so that the
 ##orbit of the outer triple is defined with respect to the
+
 ##Initializing list rows
 end_state_all = []
+
 ##Defining mean anomaly
 M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
-for i, x in tqdm.tqdm(enumerate(M_values)):
-    sim = rebound.Simulation()
-    ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
-    sim.softening = 1e-1
-    # sim.heartbeat = heartbeat
-    ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
-    sim.add(m=1)
-    ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-    sim.add(m=1, a=1, M=x, e=1e-3)
-    sim.add(m=1, a=10, e=0.9, M=np.pi)
-    ##Switch to com frame...
-    sim.move_to_com()
-    orbs = sim.orbits()
-    ps = sim.particles
-    # ##SETTING UP SOFTENING
-    rebx = reboundx.Extras(sim)
-    softened_force = rebx.load_force("softened_force")
-    rebx.add_force(softened_force)
-    sim.particles[0].params["softening_length"] = 0.9
-    sim.particles[1].params["softening_length"] = 0.9
-    sim.particles[2].params["softening_length"] = 0.9
+#Defining inclination
+inc_values = np.linspace(0, np.pi, 100, endpoint = True) #100 even spaces from 0 to pi
 
-    sim.move_to_com()
-    #Looping 100 times
-    #integration_loops = 1000
-    loop_time = 0.1 * orbs[1].P
-    sim.start_server(port=1236)
-    save_interval = loop_time
-    ##Using simulation archive to save data -- will be used to generate a movie later(!)
-    sim.save_to_file("archive.bin", interval=save_interval, delete_file=True)
-    # sim.save_to_file("archive.bin", delete_file=True)
-    #webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
-    # time.sleep(10)
-    end_state = [np.inf for ii in range(6)]
+#Progress bar
+pbar = tqdm.tdqm(total= 100*100)
 
-    calculation_start_time = time.time()
-    max_calculation_time = 60
-    max_simulation_time = np.inf
-    calculation_time = time.time() - calculation_start_time 
-    finished = False
-    while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
-        sim.integrate(sim.t + loop_time)
+#Trial indices
+
+for x in M_values:
+    for i in inc_values:
+        sim = rebound.Simulation()
+        ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
+        sim.softening = 1e-1
+        # sim.heartbeat = heartbeat
+        ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
+        sim.add(m=1)
+        ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
+        sim.add(m=1, a=1, M=x, inc=i, e=1e-3)
+        sim.add(m=1, a=10, e=0.9, M=np.pi)
+        ##Switch to com frame...
+        sim.move_to_com()
+        orbs = sim.orbits()
+        ps = sim.particles
+        # ##SETTING UP SOFTENING
+        rebx = reboundx.Extras(sim)
+        softened_force = rebx.load_force("softened_force")
+        rebx.add_force(softened_force)
+        sim.particles[0].params["softening_length"] = 0.9
+        sim.particles[1].params["softening_length"] = 0.9
+        sim.particles[2].params["softening_length"] = 0.9
+
+        sim.move_to_com()
+        #Looping 100 times
+        #integration_loops = 1000
+        loop_time = 0.1 * orbs[1].P
+        sim.start_server(port=1236)
+        save_interval = loop_time
+        ##Using simulation archive to save data -- will be used to generate a movie later(!)
+        sim.save_to_file("archive.bin", interval=save_interval, delete_file=True)
+        # sim.save_to_file("archive.bin", delete_file=True)
+        #webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
+        # time.sleep(10)
+        end_state = [np.inf for ii in range(6)]
+
+        calculation_start_time = time.time()
+        max_calculation_time = 60
+        max_simulation_time = np.inf
         calculation_time = time.time() - calculation_start_time 
-        # time.sleep(0.05)
-        end_state[0] = sim.t
-        current_systems = get_state(sim)
-        finished = is_finished(current_systems, thres=30)
-        if finished:
-            binary = current_systems[1]
-            current_orbits = binary.orbits[0]
-            ##Getting orbits in softened potential the right way
-            relative_position = np.diff(binary.sub_pos, axis=0)[0]
-            relative_velocity = np.diff(binary.sub_vel, axis=0)[0]
-            rp = get_peri_softened(relative_position[0], relative_position[1], relative_position[2],
+        finished = False
+        while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
+            sim.integrate(sim.t + loop_time)
+            calculation_time = time.time() - calculation_start_time 
+            # time.sleep(0.05)
+            end_state[0] = sim.t
+            current_systems = get_state(sim)
+            finished = is_finished(current_systems, thres=30)
+            if finished:
+                binary = current_systems[1]
+                current_orbits = binary.orbits[0]
+                ##Getting orbits in softened potential the right way
+                relative_position = np.diff(binary.sub_pos, axis=0)[0]
+                relative_velocity = np.diff(binary.sub_vel, axis=0)[0]
+                rp = get_peri_softened(relative_position[0], relative_position[1], relative_position[2],
+                                relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
+                ra = get_apo_softened(relative_position[0], relative_position[1], relative_position[2],
                             relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
-            ra = get_apo_softened(relative_position[0], relative_position[1], relative_position[2],
-                        relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
-            sma = 0.5 * (rp + ra)
-            ecc = 1 - rp / sma
-            ##Have to store this somewhere for each initial condition...
-            ##Need to use our more accurate method to calculate the orbits here...
-            end_state = [sim.t, sma, ecc, current_orbits[-3], current_orbits[-4], x]
-            ##Prevent float
-            end_state = [float(x) for x in end_state]
+                sma = 0.5 * (rp + ra)
+                ecc = 1 - rp / sma
+                ##Have to store this somewhere for each initial condition...
+                ##Need to use our more accurate method to calculate the orbits here...
+                end_state = [trial, sim.t, sma, ecc, current_orbits[-3], current_orbits[-4], x, i]
+                ##Prevent float
+                end_state = [float(x) for x in end_state]
+                ##Update trial index
+                trial +=1
+            end_state_all.append(end_state)
+            pbar.update(1)
 
-    end_state_all.append(end_state)
-    print(end_state)
 ##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
-df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M"))
+df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M", "inc"))
 ##Convert dataframe to parquet file
-df.to_parquet('softened_trials.pq')
+df.to_parquet('first_softened_inc_M_trials.pq')
