@@ -86,7 +86,8 @@ def run_simulation(coord):
 
 M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
 #Defining inclination
-inc_values = np.linspace(0, np.pi, 100, endpoint = True) #100 even spaces from 0 to pi
+cos_inc_values = np.linspace(-1, 1, 100, endpoint=True)
+inc_values = np.arccos(cos_inc_values) #100 even spaces from 0 to pi
 #Progress bar
 pbar = tqdm.tqdm(total= 100*100)
 #Trial indices
