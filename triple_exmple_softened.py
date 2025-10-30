@@ -3,10 +3,15 @@ import rebound
 import time
 import pandas as pd
 import tqdm
+print("test")
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
+print("test")
 from softened_orbit_analysis import get_apo_softened, get_peri_softened
 import reboundx
+import sys
 
+print(np.__version__)
+sys.stdout.flush()
 def heartbeat(sim_pointer):
     # The function argument is a pointer to the simulation:
     # Here we get its contents:
@@ -76,36 +81,29 @@ end_state_all = []
 
 ##Defining mean anomaly
 M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
-#Defining inclination
-inc_values = np.linspace(0, np.pi, 100, endpoint = True) #100 even spaces from 0 to pi
-
-#Progress bar
-pbar = tqdm.tdqm(total= 100*100)
-
-#Trial indices
-
-for x in M_values:
-    for i in inc_values:
-        sim = rebound.Simulation()
-        ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
-        sim.softening = 1e-1
-        # sim.heartbeat = heartbeat
-        ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
-        sim.add(m=1)
-        ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-        sim.add(m=1, a=1, M=x, inc=i, e=1e-3)
-        sim.add(m=1, a=10, e=0.9, M=np.pi)
-        ##Switch to com frame...
-        sim.move_to_com()
-        orbs = sim.orbits()
-        ps = sim.particles
-        # ##SETTING UP SOFTENING
-        rebx = reboundx.Extras(sim)
-        softened_force = rebx.load_force("softened_force")
-        rebx.add_force(softened_force)
-        sim.particles[0].params["softening_length"] = 0.9
-        sim.particles[1].params["softening_length"] = 0.9
-        sim.particles[2].params["softening_length"] = 0.9
+for i, x in tqdm.tqdm(enumerate(M_values)):
+    print(i)
+    sys.stdout.flush()
+    sim = rebound.Simulation()
+    ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
+    sim.softening = 1e-1
+    # sim.heartbeat = heartbeat
+    ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
+    sim.add(m=1)
+    ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
+    sim.add(m=1, a=1, M=x, e=1e-3)
+    sim.add(m=1, a=10, e=0.9, M=np.pi)
+    ##Switch to com frame...
+    sim.move_to_com()
+    orbs = sim.orbits()
+    ps = sim.particles
+    # ##SETTING UP SOFTENING
+    rebx = reboundx.Extras(sim)
+    softened_force = rebx.load_force("softened_force")
+    rebx.add_force(softened_force)
+    sim.particles[0].params["softening_length"] = 0.9
+    sim.particles[1].params["softening_length"] = 0.9
+    sim.particles[2].params["softening_length"] = 0.9
 
         sim.move_to_com()
         #Looping 100 times
