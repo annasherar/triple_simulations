@@ -3,10 +3,15 @@ import rebound
 import time
 import pandas as pd
 import tqdm
+print("test")
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
+print("test")
 from softened_orbit_analysis import get_apo_softened, get_peri_softened
 import reboundx
+import sys
 
+print(np.__version__)
+sys.stdout.flush()
 def heartbeat(sim_pointer):
     # The function argument is a pointer to the simulation:
     # Here we get its contents:
@@ -75,6 +80,8 @@ end_state_all = []
 ##Defining mean anomaly
 M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
 for i, x in tqdm.tqdm(enumerate(M_values)):
+    print(i)
+    sys.stdout.flush()
     sim = rebound.Simulation()
     ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
     sim.softening = 1e-1
