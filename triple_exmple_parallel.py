@@ -41,11 +41,14 @@ def is_finished(current_systems, thres=30):
 def run_simulation(coord):
     x = coord[0]
     i = coord[1]
+    iecc = coord[2]
+    o1 = coord[3]
+    o2 = coord[4]
     sim = rebound.Simulation()
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-    sim.add(m=1, a=1, M= x, e=1e-3, inc=i)
+    sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=o1, omega=o2)
     sim.add(m=1, a=10, e=0.9, M=np.pi)
     ##Switch to com frame...
     sim.move_to_com()
@@ -65,6 +68,7 @@ def run_simulation(coord):
     max_simulation_time = np.inf
     calculation_time = time.time() - calculation_start_time
     finished = False
+    en0 = sim.energy()
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
@@ -78,27 +82,33 @@ def run_simulation(coord):
             current_systems = get_state(sim)
             finished = is_finished(current_systems, thres=30)
             ##Have to store this somewhere for each initial condition...
-            end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4], x, i]
+            enf = sim.energy()
+            end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4], x, i, iecc, o1, o2, (enf-en0)/en0]
             ##Prevent float
             end_state = [float(x) for x in end_state]
             ##Update trial index
     return end_state
 
-M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
+M_values = np.linspace(0, 2*np.pi, 10, endpoint = False) #100 even spaces from 0 to 2pi
 #Defining inclination
-cos_inc_values = np.linspace(-1, 1, 100, endpoint=True)
+cos_inc_values = np.linspace(-1, 1, 10, endpoint=True)
 inc_values = np.arccos(cos_inc_values) #100 even spaces from 0 to pi
+ecc_values = np.linspace(0, 1, 10, endpoint=False)
+Omega_values = np.linspace(0, 2*np.pi, 10, endpoint=False)
+omega_values = np.linspace(0, 2*np.pi, 10, endpoint=False)
 #Progress bar
 pbar = tqdm.tqdm(total= 100*100)
 #Trial indices
-coords = np.meshgrid(M_values, inc_values, indexing="ij")
-MS, IS = coords
-coords = np.transpose((MS.ravel(), IS.ravel()))
-with Pool(9) as p:
+coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
+MS, IS, ES, OMS, oms = coords
+coords = np.transpose([MS.ravel(), IS.ravel(), ES.ravel(), OMS.ravel(), oms.ravel()])
+with open("start", "w") as ff:
+    ff.write(f"start pool {time.time()}")
+with Pool(56) as p:
     end_state_all = p.map(run_simulation, coords)
 
 ##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
-df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M", "inc"))
+df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M", "inc", "iecc", "Omega", "omega", "energy"))
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('tmp.pq')
+df.to_parquet('newtonian_M_inc_o1_o2_trial2.pq')
