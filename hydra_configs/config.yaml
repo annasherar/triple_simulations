@@ -1,0 +1,8 @@
+nm: 10
+ni: 10
+ne: 10
+nO: 10
+nw: 10
+full_grid: False
+git:
+  commit: ${git_commit:}
