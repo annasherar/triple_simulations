@@ -137,7 +137,7 @@ def run_simulation(coord):
             ecc = 1 - rp / sma
             ##Have to store this somewhere for each initial condition...
             ##Need to use our more accurate method to calculate the orbits here...
-            end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4], x, i, o1, o2, iecc]
+            end_state = [sim.t, sma, ecc, current_orbits[-3], current_orbits[-4], x, i, o1, o2, iecc]
             ##Prevent float
             end_state = [float(x) for x in end_state]
             ##Update trial index

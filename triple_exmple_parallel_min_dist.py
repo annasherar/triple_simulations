@@ -162,4 +162,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newtonian_M_inc_o1_o2_trial2.pq')
+df.to_parquet('newtonian_min_dist.pq')
