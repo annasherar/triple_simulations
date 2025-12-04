@@ -167,5 +167,5 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M", "inc", "Omega", "omega", "iecc"))
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_trials2.pq')
+df.to_parquet('softened_M_inc_o1_o2_trials3.pq')
 

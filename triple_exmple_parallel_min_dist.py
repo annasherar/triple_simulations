@@ -118,7 +118,7 @@ def run_simulation(coord):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
         # time.sleep(0.05)
-        end_state[0] = sim.t
+        end_state["time"] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
         if finished:
