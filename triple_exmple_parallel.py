@@ -89,13 +89,14 @@ def run_simulation(coord):
             ##Update trial index
     return end_state
 
-M_values = np.linspace(0, 2*np.pi, 10, endpoint = False) #100 even spaces from 0 to 2pi
+M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
 #Defining inclination
-cos_inc_values = np.linspace(-1, 1, 10, endpoint=True)
+cos_inc_values = np.linspace(-1, 1, 100, endpoint=True)
 inc_values = np.arccos(cos_inc_values) #100 even spaces from 0 to pi
-ecc_values = np.linspace(0, 1, 10, endpoint=False)
-Omega_values = np.linspace(0, 2*np.pi, 10, endpoint=False)
-omega_values = np.linspace(0, 2*np.pi, 10, endpoint=False)
+ecc_values = [1e-3]
+Omega_values = [0]
+omega_values = [0]
+
 #Progress bar
 pbar = tqdm.tqdm(total= 100*100)
 #Trial indices

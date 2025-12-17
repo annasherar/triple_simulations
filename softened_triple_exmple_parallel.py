@@ -110,7 +110,15 @@ def run_simulation(coord):
     # sim.save_to_file("archive.bin", delete_file=True)
     #webbrowser.open("file:////home/aleksey/code/python/starforge_mult_vis/rebound_recorder.html")
     # time.sleep(10)
-    end_state = [np.inf for ii in range(6)]
+    end_state = {
+    "time": np.inf,
+    "sma": np.inf,
+    "ecc": np.inf,
+    "id1": np.inf,
+    "id2": np.inf,
+    "M": x,
+    "inc": i
+    }
     calculation_start_time = time.time()
     max_calculation_time = 60
     max_simulation_time = np.inf
@@ -120,7 +128,7 @@ def run_simulation(coord):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time 
         # time.sleep(0.05)
-        end_state[0] = sim.t
+        end_state["time"] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
         if finished:
@@ -137,20 +145,22 @@ def run_simulation(coord):
             ecc = 1 - rp / sma
             ##Have to store this somewhere for each initial condition...
             ##Need to use our more accurate method to calculate the orbits here...
-            end_state = [sim.t, sma, ecc, current_orbits[-3], current_orbits[-4], x, i, o1, o2, iecc]
-            ##Prevent float
-            end_state = [float(x) for x in end_state]
+            end_state.update({"time": sim.t, "sma": float(sma),
+                "ecc": float(ecc),
+                "id1": float(current_orbits[-3]),
+                "id2": float(current_orbits[-4])
+            })
             ##Update trial index
     return end_state
 
-##Defining mean anomaly
-M_values = np.linspace(0, 2*np.pi, 10, endpoint = False) #100 even spaces from 0 to 2pi
+
+M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
 #Defining inclination
-cos_inc_values = np.linspace(-1, 1, 10, endpoint = True) #100 even spaces from 0 to pi
-inc_values = np.arccos(cos_inc_values)
-ecc_values = np.linspace(0, 1, 10, endpoint = False)
-Omega_values = np.linspace(0, 2*np.pi, 10, endpoint = False)
-omega_values = np.linspace(0, 2*np.pi, 10, endpoint = False)
+cos_inc_values = np.linspace(-1, 1, 100, endpoint=True)
+inc_values = np.arccos(cos_inc_values) #100 even spaces from 0 to pi
+ecc_values = [1e-3]
+Omega_values = [0]
+omega_values = [0]
 
 #Progress bar
 #pbar = tqdm.tdqm(total= 100*100)
@@ -165,7 +175,7 @@ with Pool(56) as p:
 
 ##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
-df = pd.DataFrame(end_state_all, columns = ("time", "sma", "ecc", "id1", "id2", "M", "inc", "Omega", "omega", "iecc"))
+df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_trials3.pq')
+df.to_parquet('softened_M_inc_o1_o2_trials4.pq')
 
