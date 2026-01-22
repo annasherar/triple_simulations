@@ -6,8 +6,8 @@ import tqdm
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
 from softened_orbit_analysis import get_apo_softened, get_peri_softened
 import reboundx
-
 from multiprocessing import Pool
+import pytreegrav
 
 def heartbeat(sim_pointer):
     # The function argument is a pointer to the simulation:
@@ -37,6 +37,28 @@ def ForceKernel(r, h):
             * hinv
         )
 softening_length = 0.9
+
+def PE(xc, mc, hc):
+    """ xc - array of positions
+        mc - array of masses
+        hc - array of smoothing lengths
+        bc - array of magnetic field strengths
+    """
+    ## gravitational potential energy
+    phic = pytreegrav.Potential(xc, mc, hc, G=1, theta=0.5, method='bruteforce')  # G in code units
+    return 0.5 * (phic * mc).sum()
+# Calculate kinetic energy of a set of cells, include internal energy
+def KE(xc, mc, vc, uc):
+    """ xc - array of positions
+        mc - array of masses
+        vc - array of velocities
+        uc - array of internal energies
+    """
+    ## velocity w.r.t. com velocity
+    v_bulk = np.average(vc, weights=mc, axis=0)
+    v_well = vc - v_bulk
+    vSqr = np.sum(v_well ** 2, axis=1)
+    return (mc * (vSqr / 2 + uc)).sum()
 
 def get_state(sim):
     ##Trick to synchronize the accelerations
@@ -116,6 +138,7 @@ def run_simulation(coord):
     "ecc": np.inf,
     "id1": np.inf,
     "id2": np.inf,
+    "energy": np.inf,
     "M": x,
     "inc": i
     }
@@ -124,6 +147,18 @@ def run_simulation(coord):
     max_simulation_time = np.inf
     calculation_time = time.time() - calculation_start_time 
     finished = False
+    ##Defining particle variables for energy
+    ps = np.array([pp.xyz for pp in sim.particles])
+    vs = np.array([pp.vxyz for pp in sim.particles])
+    ms = np.array([pp.m for pp in sim.particles])
+    uc = 0
+    hc = [0.9,0.9,0.9]
+    kin_en0 = KE(ps, ms, vs, uc)
+    ##Potential energy
+    pot_en0 = PE(ps, ms, hc)
+    ##Initial energy
+    en0 = kin_en0 + pot_en0
+
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time 
@@ -131,6 +166,7 @@ def run_simulation(coord):
         end_state["time"] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
+        ##Finding initial energy
         if finished:
             binary = current_systems[1]
             current_orbits = binary.orbits[0]
@@ -143,12 +179,20 @@ def run_simulation(coord):
                         relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
             sma = 0.5 * (rp + ra)
             ecc = 1 - rp / sma
+            ##Finding final energy
+            ##Kinetic energy
+            kin_en = KE(ps, ms, vs, uc)
+            ##Potential energy
+            pot_en = PE(ps, ms, hc)
+            ##Final energy
+            enf = kin_en + pot_en
             ##Have to store this somewhere for each initial condition...
             ##Need to use our more accurate method to calculate the orbits here...
             end_state.update({"time": sim.t, "sma": float(sma),
                 "ecc": float(ecc),
                 "id1": float(current_orbits[-3]),
-                "id2": float(current_orbits[-4])
+                "id2": float(current_orbits[-4]),
+                "energy": (enf-en0)/en0
             })
             ##Update trial index
     return end_state
@@ -177,5 +221,5 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_trials4.pq')
+df.to_parquet('softened_M_inc_o1_o2_trials6.pq')
 
