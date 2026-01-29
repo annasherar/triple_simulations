@@ -9,12 +9,22 @@ import reboundx
 from multiprocessing import Pool
 import pytreegrav
 
-def heartbeat(sim_pointer):
-    # The function argument is a pointer to the simulation:
-    # Here we get its contents:
-    sim = sim_pointer.contents 
-    print(sim.t, sim.dt)
-    print(sim.particles[0].xyz, sim.particles[1].xyz, sim.particles[2].xyz)
+
+class MinDistTracker:
+    def __init__(self):
+        self.min_dist = np.inf
+
+    def callback(self, sim_pointer, collision):
+        sim = sim_pointer.contents      # get simulation object from pointer
+        pos1 = np.array(sim.particles[collision.p1].xyz)        # position of particle 1
+        pos2 = np.array(sim.particles[collision.p2].xyz)        # position of particle 2
+        sep = np.linalg.norm(pos1 - pos2)
+        cur_min = getattr(sim, "min_dist", np.inf)
+        # compute sep...
+        if sep < self.min_dist:
+            self.min_dist = sep
+        return 0
+
 
 def ForceKernel(r, h):
     """
@@ -101,14 +111,21 @@ def run_simulation(coord):
     o1 = coord[3]
     o2 = coord[4]
     sim = rebound.Simulation()
+
+    ## Adding collision tracker
+    tracker = MinDistTracker()
+    sim.collision = "line"
+    sim.collision_resolve = tracker.callback
+
+
     ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
     sim.softening = 1e-1
     # sim.heartbeat = heartbeat
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-    sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2 )
-    sim.add(m=1, a=10, e=0.9, M=np.pi)
+    sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
+    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -138,6 +155,7 @@ def run_simulation(coord):
     "ecc": np.inf,
     "id1": np.inf,
     "id2": np.inf,
+    "min_dist": np.inf,
     "energy": np.inf,
     "M": x,
     "inc": i
@@ -192,6 +210,7 @@ def run_simulation(coord):
                 "ecc": float(ecc),
                 "id1": float(current_orbits[-3]),
                 "id2": float(current_orbits[-4]),
+                "min_dist": float(tracker.min_dist),
                 "energy": (enf-en0)/en0
             })
             ##Update trial index
@@ -221,5 +240,5 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_trials6.pq')
+df.to_parquet('softened_M_inc_o1_o2_mindist1.pq')
 
