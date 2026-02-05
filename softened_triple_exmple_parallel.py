@@ -138,7 +138,7 @@ def run_simulation(coord):
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-    sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
+    sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=np.pi/2, omega=3*np.pi/2, r=0.9)
     sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
@@ -240,5 +240,5 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_energy.pq')
+df.to_parquet('softened_M_inc_o1_o2_o.pq')
 
