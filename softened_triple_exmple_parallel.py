@@ -69,6 +69,20 @@ def KE(xc, mc, vc, uc):
     v_well = vc - v_bulk
     vSqr = np.sum(v_well ** 2, axis=1)
     return (mc * (vSqr / 2 + uc)).sum()
+def get_energy(sim):
+    ##Defining particle variables for energy
+    ps = np.array([pp.xyz for pp in sim.particles])
+    vs = np.array([pp.vxyz for pp in sim.particles])
+    ms = np.array([pp.m for pp in sim.particles])
+    uc = 0
+    hc = [0.9,0.9,0.9]
+    kin_en = KE(ps, ms, vs, uc)
+    ##Potential energy
+    pot_en = PE(ps, ms, hc)
+    ##Initial energy
+    en = kin_en + pot_en
+    return en
+
 
 def get_state(sim):
     ##Trick to synchronize the accelerations
@@ -165,17 +179,8 @@ def run_simulation(coord):
     max_simulation_time = np.inf
     calculation_time = time.time() - calculation_start_time 
     finished = False
-    ##Defining particle variables for energy
-    ps = np.array([pp.xyz for pp in sim.particles])
-    vs = np.array([pp.vxyz for pp in sim.particles])
-    ms = np.array([pp.m for pp in sim.particles])
-    uc = 0
-    hc = [0.9,0.9,0.9]
-    kin_en0 = KE(ps, ms, vs, uc)
-    ##Potential energy
-    pot_en0 = PE(ps, ms, hc)
     ##Initial energy
-    en0 = kin_en0 + pot_en0
+    en0 = get_energy(sim)
 
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
@@ -197,13 +202,8 @@ def run_simulation(coord):
                         relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
             sma = 0.5 * (rp + ra)
             ecc = 1 - rp / sma
-            ##Finding final energy
-            ##Kinetic energy
-            kin_en = KE(ps, ms, vs, uc)
-            ##Potential energy
-            pot_en = PE(ps, ms, hc)
             ##Final energy
-            enf = kin_en + pot_en
+            enf = get_energy(sim)
             ##Have to store this somewhere for each initial condition...
             ##Need to use our more accurate method to calculate the orbits here...
             end_state.update({"time": sim.t, "sma": float(sma),
@@ -240,5 +240,5 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_mindist1.pq')
+df.to_parquet('softened_M_inc_o1_o2_energy.pq')
 
