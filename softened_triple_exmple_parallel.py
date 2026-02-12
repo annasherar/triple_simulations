@@ -134,7 +134,6 @@ def run_simulation(coord):
 
     ##Numerical trick. This softening does not matter because the corresponding acceleration is subtacted anyways
     sim.softening = 1e-1
-    # sim.heartbeat = heartbeat
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
@@ -225,8 +224,6 @@ ecc_values = [1e-3]
 Omega_values = [0]
 omega_values = [0]
 
-#Progress bar
-#pbar = tqdm.tdqm(total= 100*100)
 #Creating grid of values
 coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
 MS, IS, ES, OMS, oms = coords

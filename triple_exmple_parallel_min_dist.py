@@ -73,8 +73,6 @@ def run_simulation(coord):
     o1 = coord[3]
     o2 = coord[4]
     sim = rebound.Simulation()
-    ##Useful for debugging
-    # sim.heartbeat = heartbeat
 
     tracker = MinDistTracker()
     sim.collision = "line"
@@ -116,7 +114,6 @@ def run_simulation(coord):
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
-        # time.sleep(0.05)
         end_state["time"] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
@@ -127,9 +124,6 @@ def run_simulation(coord):
             finished = is_finished(current_systems, thres=30)
             ##Have to store this somewhere for each initial condition...
             enf = sim.energy()
-            # end_state = [sim.t, current_orbits[0], current_orbits[1], current_orbits[-3], current_orbits[-4], x, i, iecc, o1, o2, (enf-en0)/en0]
-            # ##Prevent float
-            # end_state = [float(x) for x in end_state]
             end_state.update({"time": sim.t, "sma": float(current_orbits[0]),
                 "ecc": float(current_orbits[1]),
                 "id1": float(current_orbits[-3]),
@@ -146,8 +140,6 @@ inc_values = np.arccos(cos_inc_values) #100 even spaces from 0 to pi
 ecc_values = [1e-3]
 Omega_values = [0]
 omega_values = [0]
-#Progress bar
-pbar = tqdm.tqdm(total= 100*100)
 #Trial indices
 coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
 MS, IS, ES, OMS, oms = coords
