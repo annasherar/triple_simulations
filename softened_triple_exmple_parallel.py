@@ -98,6 +98,7 @@ def get_state(sim):
     ##Systems are only grouped if we have the tidal force < 0.01 times the internal force.
     cl = cluster(ps, vs, ms, np.ones(len(ps)) * softening_length, np.array([0, 1, 2]), np.array((accel1, accel2, accel3)), tides=True, sma_order=True, tides_factor=0.01)
     return cl.systems
+
 def is_finished(current_systems, thres=30):
     ##There should be two systems identified at the end of the integration: a binary and a single.
     if len(current_systems) != 2:
@@ -112,9 +113,6 @@ def is_finished(current_systems, thres=30):
     condition1 = np.linalg.norm(relative_position) > thres
     condition2 = np.dot(relative_position, relative_velocity) > 0
     return condition1 and condition2
-##Simple example triple
-##We will vary the orbital properties later (eccentricities, inclinations)
-##FOR NOW just randomize the mean anomaly (0 to 2 pi) in this example (NB mean anomaly is not well-defined for a circular orbit...)
 ##Note rebound uses Jacobi coordinates, so that the
 ##orbit of the outer triple is defined with respect to the
 
@@ -137,7 +135,7 @@ def run_simulation(coord):
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-    sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=np.pi/2, omega=3*np.pi/2, r=0.9)
+    sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
     sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
@@ -166,6 +164,8 @@ def run_simulation(coord):
     "time": np.inf,
     "sma": np.inf,
     "ecc": np.inf,
+    "i_id1": 0,
+    "i_id2": 1,
     "id1": np.inf,
     "id2": np.inf,
     "min_dist": np.inf,
@@ -191,7 +191,7 @@ def run_simulation(coord):
         ##Finding initial energy
         if finished:
             binary = current_systems[1]
-            current_orbits = binary.orbits[0]
+            current_orbits_after = binary.orbits[0]
             ##Getting orbits in softened potential the right way
             relative_position = np.diff(binary.sub_pos, axis=0)[0]
             relative_velocity = np.diff(binary.sub_vel, axis=0)[0]
@@ -205,10 +205,12 @@ def run_simulation(coord):
             enf = get_energy(sim)
             ##Have to store this somewhere for each initial condition...
             ##Need to use our more accurate method to calculate the orbits here...
-            end_state.update({"time": sim.t, "sma": float(sma),
+            end_state.update({
+                "time": sim.t, 
+                "sma": float(sma),
                 "ecc": float(ecc),
-                "id1": float(current_orbits[-3]),
-                "id2": float(current_orbits[-4]),
+                "id1": float(current_orbits_after[-3]),
+                "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
                 "energy": (enf-en0)/en0
             })
@@ -237,5 +239,5 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('softened_M_inc_o1_o2_o.pq')
+df.to_parquet('softened_219.pq')
 

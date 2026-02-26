@@ -80,7 +80,7 @@ def run_simulation(coord):
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
-    sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=np.pi/2, omega=3*np.pi/2, r=0.9)
+    sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
     sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
@@ -98,6 +98,8 @@ def run_simulation(coord):
     "time": np.inf,
     "sma": np.inf,
     "ecc": np.inf,
+    "i_id1": 0,
+    "i_id2": 1,
     "id1": np.inf,
     "id2": np.inf,
     "min_dist": np.inf,
@@ -110,7 +112,9 @@ def run_simulation(coord):
     max_simulation_time = np.inf
     calculation_time = time.time() - calculation_start_time
     finished = False
+    current_systems = get_state(sim)
     en0 = sim.energy()
+    
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
@@ -119,15 +123,16 @@ def run_simulation(coord):
         finished = is_finished(current_systems, thres=30)
         if finished:
             binary = current_systems[1]
-            current_orbits = binary.orbits[0]
+            current_orbits_after = binary.orbits[0]
             current_systems = get_state(sim)
-            finished = is_finished(current_systems, thres=30)
             ##Have to store this somewhere for each initial condition...
             enf = sim.energy()
-            end_state.update({"time": sim.t, "sma": float(current_orbits[0]),
-                "ecc": float(current_orbits[1]),
-                "id1": float(current_orbits[-3]),
-                "id2": float(current_orbits[-4]),
+            end_state.update({
+                "time": sim.t, 
+                "sma": float(current_orbits_after[0]),
+                "ecc": float(current_orbits_after[1]),
+                "id1": float(current_orbits_after[-3]),
+                "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
                 "energy": (enf-en0)/en0})
             ##Update trial index
@@ -153,4 +158,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newtonian_min_dist_o.pq')
+df.to_parquet('newtonian_219.pq')
