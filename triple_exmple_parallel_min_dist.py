@@ -87,7 +87,12 @@ def run_simulation(coord):
     orbs = sim.orbits()
     #Looping 100 times
     integration_loops = 1000
-    loop_time = 0.1 * orbs[1].P
+    loop_time = 0.1 * orbs[1].P 
+    # times = np.logspace(
+    #     np.log10(max(sim.t, 1e-6)),
+    #     np.log10(max_simulation_time),
+    #     1000
+    # )
     # sim.start_server(port=1236)
     ##Using simulation archive to save data -- will be used to generate a movie later(!)
     # sim.save_to_file("archive.bin", interval=loop_time, delete_file=True)
@@ -113,9 +118,10 @@ def run_simulation(coord):
     calculation_time = time.time() - calculation_start_time
     finished = False
     current_systems = get_state(sim)
-    en0 = sim.energy()
+    en0 = sim.energy()  
     
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
+        # for t_next in times:
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
@@ -135,20 +141,25 @@ def run_simulation(coord):
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
                 "energy": (enf-en0)/en0})
-            ##Update trial index
+                ##Update trial index
     return end_state
 
-M_values = np.linspace(0, 2*np.pi, 100, endpoint = False) #100 even spaces from 0 to 2pi
+#Initializing random generator
+rng = np.random.default_rng()
+amt_trials = 10000
+M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
-cos_inc_values = np.linspace(-1, 1, 100, endpoint=True)
+cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
 inc_values = np.arccos(cos_inc_values) #100 even spaces from 0 to pi
-ecc_values = [1e-3]
-Omega_values = [0]
-omega_values = [0]
+ecc_values = np.full(shape=amt_trials, fill_value = [1e-3])
+Omega_values = rng.uniform(0, 2*np.pi, size=amt_trials)
+omega_values = rng.uniform(0, 2*np.pi, size=amt_trials)
+
 #Trial indices
-coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
-MS, IS, ES, OMS, oms = coords
-coords = np.transpose([MS.ravel(), IS.ravel(), ES.ravel(), OMS.ravel(), oms.ravel()])
+# coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
+# MS, IS, ES, OMS, oms = coords
+coords = list(zip(M_values, inc_values, ecc_values, Omega_values, omega_values))
+# coords = np.transpose([MS.ravel(), IS.ravel(), ES.ravel(), OMS.ravel(), oms.ravel()])
 with open("start", "w") as ff:
     ff.write(f"start pool {time.time()}")
 with Pool(56) as p:
@@ -158,4 +169,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newtonian_219.pq')
+df.to_parquet('newt_rand.pq')
