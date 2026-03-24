@@ -81,18 +81,11 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.7, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
-    #Looping 100 times
-    integration_loops = 1000
     loop_time = 0.1 * orbs[1].P 
-    # times = np.logspace(
-    #     np.log10(max(sim.t, 1e-6)),
-    #     np.log10(max_simulation_time),
-    #     1000
-    # )
     # sim.start_server(port=1236)
     ##Using simulation archive to save data -- will be used to generate a movie later(!)
     # sim.save_to_file("archive.bin", interval=loop_time, delete_file=True)
@@ -118,10 +111,10 @@ def run_simulation(coord):
     calculation_time = time.time() - calculation_start_time
     finished = False
     current_systems = get_state(sim)
-    en0 = sim.energy()  
+    #Initial energy
+    en0 = sim.energy()
     
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
-        # for t_next in times:
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
@@ -141,7 +134,6 @@ def run_simulation(coord):
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
                 "energy": (enf-en0)/en0})
-                ##Update trial index
     return end_state
 
 #Initializing random generator
@@ -156,10 +148,7 @@ Omega_values = rng.uniform(0, 2*np.pi, size=amt_trials)
 omega_values = rng.uniform(0, 2*np.pi, size=amt_trials)
 
 #Trial indices
-# coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
-# MS, IS, ES, OMS, oms = coords
 coords = list(zip(M_values, inc_values, ecc_values, Omega_values, omega_values))
-# coords = np.transpose([MS.ravel(), IS.ravel(), ES.ravel(), OMS.ravel(), oms.ravel()])
 with open("start", "w") as ff:
     ff.write(f"start pool {time.time()}")
 with Pool(56) as p:
@@ -169,4 +158,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newt_rand.pq')
+df.to_parquet('newt_ecc7.pq')

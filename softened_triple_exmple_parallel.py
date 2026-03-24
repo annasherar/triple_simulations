@@ -136,7 +136,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.7, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -150,8 +150,6 @@ def run_simulation(coord):
     sim.particles[2].params["softening_length"] = 0.9
 
     sim.move_to_com()
-    #Looping 100 times
-    integration_loops = 1000
     loop_time = 0.1 * orbs[1].P
     #sim.start_server(port=1236)
     #save_interval = loop_time
@@ -179,16 +177,15 @@ def run_simulation(coord):
     calculation_time = time.time() - calculation_start_time 
     finished = False
     ##Initial energy
+    current_systems = get_state(sim)
     en0 = get_energy(sim)
 
     while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
-        calculation_time = time.time() - calculation_start_time 
-        # time.sleep(0.05)
+        calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
         finished = is_finished(current_systems, thres=30)
-        ##Finding initial energy
         if finished:
             binary = current_systems[1]
             current_orbits_after = binary.orbits[0]
@@ -212,8 +209,7 @@ def run_simulation(coord):
                 "id1": float(current_orbits_after[-3]),
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
-                "energy": (enf-en0)/en0
-            })
+                "energy": (enf-en0)/en0})
             ##Update trial index
     return end_state
 
@@ -230,10 +226,6 @@ Omega_values = rng.uniform(0, 2*np.pi, size=amt_trials)
 omega_values = rng.uniform(0, 2*np.pi, size=amt_trials)
 
 #Creating grid of values
-# coords = np.meshgrid(M_values, inc_values, ecc_values, Omega_values, omega_values, indexing="ij")
-# MS, IS, ES, OMS, oms = coords
-# coords = np.column_stack([MS.ravel(), IS.ravel(), ES.ravel(), OMS.ravel(), oms.ravel()])
-# coords = [tuple(row) for row in coords]
 coords = list(zip(M_values, inc_values, ecc_values, Omega_values, omega_values))
 with Pool(56) as p:
     end_state_all = p.map(run_simulation, coords)
@@ -243,5 +235,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_rand.pq')
-
+df.to_parquet('soft_ecc7.pq')
