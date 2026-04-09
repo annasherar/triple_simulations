@@ -99,7 +99,7 @@ def get_state(sim):
     cl = cluster(ps, vs, ms, np.ones(len(ps)) * softening_length, np.array([0, 1, 2]), np.array((accel1, accel2, accel3)), tides=True, sma_order=True, tides_factor=0.01)
     return cl.systems
 
-def is_finished(current_systems, thres=30):
+def is_dissociated(current_systems, thres=30):
     ##There should be two systems identified at the end of the integration: a binary and a single.
     if len(current_systems) != 2:
         return False
@@ -169,33 +169,37 @@ def run_simulation(coord):
     "min_dist": np.inf,
     "energy": np.inf,
     "M": x,
-    "inc": i
+    "inc": i,
+    "state": np.inf
     }
     calculation_start_time = time.time()
     max_calculation_time = 60
-    max_simulation_time = np.inf
+    max_simulation_time = 1000 * orbs[1].P
     calculation_time = time.time() - calculation_start_time 
-    finished = False
+    dissociated = False
     ##Initial energy
     current_systems = get_state(sim)
     en0 = get_energy(sim)
+    flag = -1
 
-    while not finished and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
+    while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(sim.t + loop_time)
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
-        finished = is_finished(current_systems, thres=30)
-        if finished:
-            binary = current_systems[1]
-            current_orbits_after = binary.orbits[0]
+        dissociated = is_dissociated(current_systems, thres=30)
+        if dissociated or (sim.t > max_simulation_time and len(current_systems) == 1):
+            flag = int(dissociated)
+            outer = current_systems[-1]
+            current_orbits_after = outer.orbits[0]
             ##Getting orbits in softened potential the right way
-            relative_position = np.diff(binary.sub_pos, axis=0)[0]
-            relative_velocity = np.diff(binary.sub_vel, axis=0)[0]
+            relative_position = np.diff(outer.sub_pos[:2], axis=0)[0]
+            relative_velocity = np.diff(outer.sub_vel[:2], axis=0)[0]
+            outer_mass = outer.sub_mass[0] + outer.sub_mass[1]
             rp = get_peri_softened(relative_position[0], relative_position[1], relative_position[2],
-                            relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
+                            relative_velocity[0], relative_velocity[1], relative_velocity[2], outer_mass, softening_length)
             ra = get_apo_softened(relative_position[0], relative_position[1], relative_position[2],
-                        relative_velocity[0], relative_velocity[1], relative_velocity[2], binary.mass, softening_length)
+                        relative_velocity[0], relative_velocity[1], relative_velocity[2], outer_mass, softening_length)
             sma = 0.5 * (rp + ra)
             ecc = 1 - rp / sma
             ##Final energy
@@ -209,14 +213,16 @@ def run_simulation(coord):
                 "id1": float(current_orbits_after[-3]),
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
-                "energy": (enf-en0)/en0})
+                "energy": (enf-en0)/en0,
+                "state": flag
+                })
             ##Update trial index
     return end_state
 
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10000
+amt_trials = 10
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -235,4 +241,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_ecc7.pq')
+df.to_parquet('soft_disttest.pq')
