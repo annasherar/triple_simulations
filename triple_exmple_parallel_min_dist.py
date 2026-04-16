@@ -107,7 +107,7 @@ def run_simulation(coord):
     "state": np.inf
     }
     calculation_start_time = time.time()
-    max_calculation_time = 60
+    max_calculation_time = 90
     max_simulation_time = 1000 * orbs[1].P
     calculation_time = time.time() - calculation_start_time
     dissociated = False
@@ -143,7 +143,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10
+amt_trials = 10000
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
