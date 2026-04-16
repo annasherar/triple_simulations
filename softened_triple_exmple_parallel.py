@@ -167,7 +167,8 @@ def run_simulation(coord):
     "id1": np.inf,
     "id2": np.inf,
     "min_dist": np.inf,
-    "energy": np.inf,
+    "energy_ratio": np.inf,
+    "enf": np.inf,
     "M": x,
     "inc": i,
     "state": np.inf
@@ -218,7 +219,8 @@ def run_simulation(coord):
                 "id1": float(current_orbits_after[-3]),
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
-                "energy": (enf-en0)/en0,
+                "energy_ratio": (enf-en0)/en0,
+                "enf": enf,
                 "state": flag
                 })
             ##Update trial index
@@ -227,7 +229,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 1000
+amt_trials = 10
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -246,4 +248,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_disttest2.pq')
+df.to_parquet('soft_disttest3.pq')
