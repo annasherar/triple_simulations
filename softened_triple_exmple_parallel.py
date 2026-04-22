@@ -136,7 +136,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.7, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -171,7 +171,7 @@ def run_simulation(coord):
     "enf": np.inf,
     "M": x,
     "inc": i,
-    "state": np.inf
+    "state": 2
     }
     calculation_start_time = time.time()
     max_calculation_time = 90
@@ -184,7 +184,7 @@ def run_simulation(coord):
     flag = -1
 
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
-        sim.integrate(sim.t + loop_time)
+        sim.integrate(max(sim.t * 1.005, sim.t + (0.01 * orbs[1].P)))
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
@@ -207,6 +207,8 @@ def run_simulation(coord):
             ra = get_apo_softened(relative_position[0], relative_position[1], relative_position[2],
                         relative_velocity[0], relative_velocity[1], relative_velocity[2], outer_mass, softening_length)
             sma = 0.5 * (rp + ra)
+            # if np.isnan(sma):
+            #     breakpoint()
             ecc = 1 - rp / sma
             ##Final energy
             enf = get_energy(sim)
@@ -248,4 +250,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_disttest3.pq')
+df.to_parquet('soft_ecc9422.pq')

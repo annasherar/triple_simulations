@@ -81,7 +81,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.7, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -118,7 +118,7 @@ def run_simulation(coord):
     flag = -1
     
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
-        sim.integrate(sim.t + loop_time)
+        sim.integrate(max(sim.t * 1.005, sim.t + (0.01 * orbs[1].P)))
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
@@ -145,7 +145,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10
+amt_trials = 10000
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -165,4 +165,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('test3.pq')
+df.to_parquet('newt_ecc9422.pq')
