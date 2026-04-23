@@ -69,13 +69,28 @@ def KE(xc, mc, vc, uc):
     v_well = vc - v_bulk
     vSqr = np.sum(v_well ** 2, axis=1)
     return (mc * (vSqr / 2 + uc)).sum()
-def get_energy(sim):
+# def get_all_energy(sim):
+#     ##Defining particle variables for energy
+#     ps = np.array([pp.xyz for pp in sim.particles])
+#     vs = np.array([pp.vxyz for pp in sim.particles])
+#     ms = np.array([pp.m for pp in sim.particles])
+#     uc = 0
+#     hc = [0.9,0.9,0.9]
+#     kin_en = KE(ps, ms, vs, uc)
+#     ##Potential energy
+#     pot_en = PE(ps, ms, hc)
+#     ##Initial energy
+#     en = kin_en + pot_en
+#     return en
+def get_energy(sim, particle_num):
     ##Defining particle variables for energy
-    ps = np.array([pp.xyz for pp in sim.particles])
-    vs = np.array([pp.vxyz for pp in sim.particles])
-    ms = np.array([pp.m for pp in sim.particles])
+    particles = sim.particles[particle_num]
+    ps = np.array(ps)
+    ps = np.array([pp.xyz for pp in particles])
+    vs = np.array([pp.vxyz for pp in particles])
+    ms = np.array([pp.m for pp in particles])
     uc = 0
-    hc = [0.9,0.9,0.9]
+    hc = np.ones(len(ps))*0.9
     kin_en = KE(ps, ms, vs, uc)
     ##Potential energy
     pot_en = PE(ps, ms, hc)
@@ -94,7 +109,6 @@ def get_state(sim):
     ps = np.array([pp.xyz for pp in sim.particles])
     vs = np.array([pp.vxyz for pp in sim.particles])
     ms = np.array([pp.m for pp in sim.particles])
-    ##You will have to adjust the 4th argument when you have softening(!)
     ##Systems are only grouped if we have the tidal force < 0.01 times the internal force.
     cl = cluster(ps, vs, ms, np.ones(len(ps)) * softening_length, np.array([0, 1, 2]), np.array((accel1, accel2, accel3)), tides=True, sma_order=True, tides_factor=0.01)
     return cl.systems
@@ -180,29 +194,34 @@ def run_simulation(coord):
     dissociated = False
     ##Initial energy
     current_systems = get_state(sim)
-    en0 = get_energy(sim)
+    all_systems = current_systems[:]
+    en0 = get_energy(sim, all_systems[:])
+    ## Ran to max CPU time
     flag = -1
 
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(max(sim.t * 1.005, sim.t + (0.01 * orbs[1].P)))
+        print(sim.t/orbs[1].P)
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
         dissociated = is_dissociated(current_systems, thres=30)
         if dissociated or (sim.t > max_simulation_time and len(current_systems) == 1):
+            ## Stable condition
             flag = int(dissociated)
             outer = current_systems[-1]
+            inner = current_systems[0]
             current_orbits_after = outer.orbits[0]
             ##Getting orbits in softened potential the right way
-            relative_position = np.diff(outer.sub_pos[:2], axupis=0)[0]
+            relative_position = np.diff(outer.sub_pos[:2], axis=0)[0]
             relative_velocity = np.diff(outer.sub_vel[:2], axis=0)[0]
             #Confirming first 2 entries in sub_pos are closer
             if len(current_systems) == 1:
                 r01 = np.linalg.norm(outer.sub_pos[1]-outer.sub_pos[0])
                 r02 = np.linalg.norm(outer.sub_pos[2]-outer.sub_pos[0])
                 r12 = np.linalg.norm(outer.sub_pos[2]-outer.sub_pos[1])
-                assert r01 < r02, "First 2 entries are further"
-                assert r01 < r12, "Last 2 entries are larger"
+                assert r01 < r02, "02 > 01"
+                assert r01 < r12, "12 > 01"
             outer_mass = outer.sub_mass[0] + outer.sub_mass[1]
             rp = get_peri_softened(relative_position[0], relative_position[1], relative_position[2],
                             relative_velocity[0], relative_velocity[1], relative_velocity[2], outer_mass, softening_length)
@@ -210,10 +229,11 @@ def run_simulation(coord):
                         relative_velocity[0], relative_velocity[1], relative_velocity[2], outer_mass, softening_length)
             sma = 0.5 * (rp + ra)
             # if np.isnan(sma):
-            #     breakpoint()
+            #     print(f"[rank {rank}] rp={rp}, sma={sma}")
             ecc = 1 - rp / sma
             ##Final energy
-            enf = get_energy(sim)
+            # enf = get_energy(all_systems.sub_pos[:], all_systems.sub_vel[:], all_systems.sub_mass[:])
+            # inner_enf = get_energy(inner.sub_pos[:2], inner.sub_vel[:2], inner.sub_mass[:2])
             ##Have to store this somewhere for each initial condition...
             ##Need to use our more accurate method to calculate the orbits here...
             end_state.update({
@@ -223,8 +243,8 @@ def run_simulation(coord):
                 "id1": float(current_orbits_after[-3]),
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
-                "energy_ratio": (enf-en0)/en0,
-                "enf": enf,
+                # "energy_ratio": (enf-en0)/en0,
+                # "inner_enf": inner_enf,
                 "state": flag
                 })
             ##Update trial index
@@ -233,7 +253,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10000
+amt_trials = 10
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -252,4 +272,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_newtime_ecc9.pq')
+df.to_parquet('soft_test.pq')
