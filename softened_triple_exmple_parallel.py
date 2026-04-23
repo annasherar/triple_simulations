@@ -174,7 +174,7 @@ def run_simulation(coord):
     "state": 2
     }
     calculation_start_time = time.time()
-    max_calculation_time = 90
+    max_calculation_time = 120
     max_simulation_time = 1000 * orbs[1].P
     calculation_time = time.time() - calculation_start_time 
     dissociated = False
@@ -194,13 +194,15 @@ def run_simulation(coord):
             outer = current_systems[-1]
             current_orbits_after = outer.orbits[0]
             ##Getting orbits in softened potential the right way
-            relative_position = np.diff(outer.sub_pos[:2], axis=0)[0]
+            relative_position = np.diff(outer.sub_pos[:2], axupis=0)[0]
             relative_velocity = np.diff(outer.sub_vel[:2], axis=0)[0]
             #Confirming first 2 entries in sub_pos are closer
             if len(current_systems) == 1:
                 r01 = np.linalg.norm(outer.sub_pos[1]-outer.sub_pos[0])
                 r02 = np.linalg.norm(outer.sub_pos[2]-outer.sub_pos[0])
+                r12 = np.linalg.norm(outer.sub_pos[2]-outer.sub_pos[1])
                 assert r01 < r02, "First 2 entries are further"
+                assert r01 < r12, "Last 2 entries are larger"
             outer_mass = outer.sub_mass[0] + outer.sub_mass[1]
             rp = get_peri_softened(relative_position[0], relative_position[1], relative_position[2],
                             relative_velocity[0], relative_velocity[1], relative_velocity[2], outer_mass, softening_length)
@@ -231,7 +233,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10
+amt_trials = 10000
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -250,4 +252,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_ecc9422.pq')
+df.to_parquet('soft_newtime_ecc9.pq')

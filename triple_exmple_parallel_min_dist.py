@@ -108,7 +108,7 @@ def run_simulation(coord):
     "state": np.inf
     }
     calculation_start_time = time.time()
-    max_calculation_time = 90
+    max_calculation_time = 120
     max_simulation_time = 1000 * orbs[1].P
     calculation_time = time.time() - calculation_start_time
     dissociated = False
@@ -165,4 +165,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newt_ecc9422.pq')
+df.to_parquet('newt_oldtime_ecc9.pq')
