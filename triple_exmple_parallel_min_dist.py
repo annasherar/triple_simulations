@@ -6,7 +6,7 @@ import sys
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
 import webbrowser
 import tqdm
-
+import pytreegrav
 from multiprocessing import Pool
 
 def heartbeat(sim_pointer):
@@ -35,6 +35,43 @@ class MinDistTracker:
         if sep < self.min_dist:
             self.min_dist = sep
         return 0
+
+def PE(xc, mc, hc):
+    """ xc - array of positions
+        mc - array of masses
+        hc - array of smoothing lengths
+        bc - array of magnetic field strengths
+    """
+    ## gravitational potential energy
+    phic = pytreegrav.Potential(xc, mc, hc, G=1, theta=0.5, method='bruteforce')  # G in code units
+    return 0.5 * (phic * mc).sum()
+# Calculate kinetic energy of a set of cells, include internal energy
+def KE(xc, mc, vc, uc):
+    """ xc - array of positions
+        mc - array of masses
+        vc - array of velocities
+        uc - array of internal energies
+    """
+    ## velocity w.r.t. com velocity
+    v_bulk = np.average(vc, weights=mc, axis=0)
+    v_well = vc - v_bulk
+    vSqr = np.sum(v_well ** 2, axis=1)
+    return (mc * (vSqr / 2 + uc)).sum()
+
+def get_binary_energy(ps, vs, ms):
+    ##Defining particle variables for energy
+    # particles = sim.particles[particle_num]
+    ps = np.array(ps)
+    vs = np.array(vs)
+    ms = np.array(ms)
+    uc = 0
+    hc = np.zeros(len(ps))
+    kin_en = KE(ps, ms, vs, uc)
+    ##Potential energy
+    pot_en = PE(ps, ms, hc)
+    ##Initial energy
+    en = kin_en + pot_en
+    return en
 
 def get_state(sim):
     ##Trick to synchronize the accelerations
@@ -81,7 +118,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.74, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -101,11 +138,17 @@ def run_simulation(coord):
     "id1": np.inf,
     "id2": np.inf,
     "min_dist": np.inf,
+    "all_en0": np.inf,
+    "all_enf": np.inf,
+    "inner_enf": np.inf,
+    "inner_en0": np.inf,
     "energy_ratio": np.inf,
-    "enf": np.inf,
-    "M": x,
-    "inc": i,
-    "state": np.inf
+    "i_M": x,
+    "i_inc": i,
+    "i_ecc": iecc,
+    "i_Omega": o1,
+    "i_omega": o2,
+    "state": 2
     }
     calculation_start_time = time.time()
     max_calculation_time = 120
@@ -113,8 +156,10 @@ def run_simulation(coord):
     calculation_time = time.time() - calculation_start_time
     dissociated = False
     current_systems = get_state(sim)
+    outer = current_systems[-1]
     #Initial energy
     en0 = sim.energy()
+    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
     flag = -1
     
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
@@ -125,10 +170,10 @@ def run_simulation(coord):
         dissociated = is_dissociated(current_systems, thres=30)
         if dissociated or (sim.t > max_simulation_time and len(current_systems) == 1):
             flag = int(dissociated)
+            current_systems = get_state(sim)
             outer = current_systems[-1]
             current_orbits_after = outer.orbits[0]
-            current_systems = get_state(sim)
-            ##Have to store this somewhere for each initial condition...
+            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
             enf = sim.energy()
             end_state.update({
                 "time": sim.t, 
@@ -137,8 +182,11 @@ def run_simulation(coord):
                 "id1": float(current_orbits_after[-3]),
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
+                "all_en0": en0,
+                "all_enf": enf,
+                "inner_enf": inner_enf,
+                "inner_en0": inner_en0,
                 "energy_ratio": (enf-en0)/en0,
-                "enf": enf,
                 "state": flag
                 })
     return end_state
@@ -161,8 +209,7 @@ with open("start", "w") as ff:
 with Pool(56) as p:
     end_state_all = p.map(run_simulation, coords)
 
-##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newt_oldtime_ecc9.pq')
+df.to_parquet('newt_74.pq')

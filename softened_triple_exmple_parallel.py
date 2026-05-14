@@ -46,6 +46,7 @@ def ForceKernel(r, h):
             * hinv
             * hinv
         )
+
 softening_length = 0.9
 
 def PE(xc, mc, hc):
@@ -69,26 +70,25 @@ def KE(xc, mc, vc, uc):
     v_well = vc - v_bulk
     vSqr = np.sum(v_well ** 2, axis=1)
     return (mc * (vSqr / 2 + uc)).sum()
-# def get_all_energy(sim):
-#     ##Defining particle variables for energy
-#     ps = np.array([pp.xyz for pp in sim.particles])
-#     vs = np.array([pp.vxyz for pp in sim.particles])
-#     ms = np.array([pp.m for pp in sim.particles])
-#     uc = 0
-#     hc = [0.9,0.9,0.9]
-#     kin_en = KE(ps, ms, vs, uc)
-#     ##Potential energy
-#     pot_en = PE(ps, ms, hc)
-#     ##Initial energy
-#     en = kin_en + pot_en
-#     return en
-def get_energy(sim, particle_num):
+def get_all_energy(sim):
     ##Defining particle variables for energy
-    particles = sim.particles[particle_num]
+    ps = np.array([pp.xyz for pp in sim.particles])
+    vs = np.array([pp.vxyz for pp in sim.particles])
+    ms = np.array([pp.m for pp in sim.particles])
+    uc = 0
+    hc = [0.9,0.9,0.9]
+    kin_en = KE(ps, ms, vs, uc)
+    ##Potential energy
+    pot_en = PE(ps, ms, hc)
+    ##Initial energy
+    en = kin_en + pot_en
+    return en
+def get_binary_energy(ps, vs, ms):
+    ##Defining particle variables for energy
+    # particles = sim.particles[particle_num]
     ps = np.array(ps)
-    ps = np.array([pp.xyz for pp in particles])
-    vs = np.array([pp.vxyz for pp in particles])
-    ms = np.array([pp.m for pp in particles])
+    vs = np.array(vs)
+    ms = np.array(ms)
     uc = 0
     hc = np.ones(len(ps))*0.9
     kin_en = KE(ps, ms, vs, uc)
@@ -150,7 +150,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.64, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -181,10 +181,16 @@ def run_simulation(coord):
     "id1": np.inf,
     "id2": np.inf,
     "min_dist": np.inf,
+    "all_en0": np.inf,
+    "all_enf": np.inf,
+    "inner_enf": np.inf,
+    "inner_en0": np.inf,
     "energy_ratio": np.inf,
-    "enf": np.inf,
-    "M": x,
-    "inc": i,
+    "i_M": x,
+    "i_inc": i,
+    "i_ecc": iecc,
+    "i_Omega": o1,
+    "i_omega": o2,
     "state": 2
     }
     calculation_start_time = time.time()
@@ -194,14 +200,15 @@ def run_simulation(coord):
     dissociated = False
     ##Initial energy
     current_systems = get_state(sim)
-    all_systems = current_systems[:]
-    en0 = get_energy(sim, all_systems[:])
+    outer = current_systems[-1]
+    en0 = get_all_energy(sim)
+    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
     ## Ran to max CPU time
     flag = -1
 
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(max(sim.t * 1.005, sim.t + (0.01 * orbs[1].P)))
-        print(sim.t/orbs[1].P)
+        # print(sim.t/orbs[1].P)
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
@@ -210,7 +217,6 @@ def run_simulation(coord):
             ## Stable condition
             flag = int(dissociated)
             outer = current_systems[-1]
-            inner = current_systems[0]
             current_orbits_after = outer.orbits[0]
             ##Getting orbits in softened potential the right way
             relative_position = np.diff(outer.sub_pos[:2], axis=0)[0]
@@ -232,9 +238,8 @@ def run_simulation(coord):
             #     print(f"[rank {rank}] rp={rp}, sma={sma}")
             ecc = 1 - rp / sma
             ##Final energy
-            # enf = get_energy(all_systems.sub_pos[:], all_systems.sub_vel[:], all_systems.sub_mass[:])
-            # inner_enf = get_energy(inner.sub_pos[:2], inner.sub_vel[:2], inner.sub_mass[:2])
-            ##Have to store this somewhere for each initial condition...
+            enf = get_all_energy(sim)
+            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
             ##Need to use our more accurate method to calculate the orbits here...
             end_state.update({
                 "time": sim.t, 
@@ -243,8 +248,11 @@ def run_simulation(coord):
                 "id1": float(current_orbits_after[-3]),
                 "id2": float(current_orbits_after[-4]),
                 "min_dist": float(tracker.min_dist),
-                # "energy_ratio": (enf-en0)/en0,
-                # "inner_enf": inner_enf,
+                "all_en0": en0,
+                "all_enf": enf,
+                "inner_enf": inner_enf,
+                "inner_en0": inner_en0,
+                "energy_ratio": (enf-en0)/en0,
                 "state": flag
                 })
             ##Update trial index
@@ -253,7 +261,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10
+amt_trials = 10000
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -272,4 +280,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_test.pq')
+df.to_parquet('soft_64.pq')
