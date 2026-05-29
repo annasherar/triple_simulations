@@ -5,104 +5,11 @@ import pandas as pd
 import sys
 from starforge_mult_search.code.find_multiples_new2 import cluster, system
 import webbrowser
-import tqdm
 import pytreegrav
 from multiprocessing import Pool
-
-def heartbeat(sim_pointer):
-    # The function argument is a pointer to the simulation:
-    # Here we get its contents:
-    sim = sim_pointer.contents 
-    d1, d2, d3 = (np.linalg.norm(np.array(sim.particles[1].xyz)-np.array(sim.particles[0].xyz)),
-                np.linalg.norm(np.array(sim.particles[2].xyz)-np.array(sim.particles[0].xyz)),
-                np.linalg.norm(np.array(sim.particles[2].xyz)-np.array(sim.particles[1].xyz)))
-    d1 = min(d1, d2, d3)
-    if d1 < 0.03: 
-        print(d1)
-
-
-class MinDistTracker:
-    def __init__(self):
-        self.min_dist = np.inf
-
-    def callback(self, sim_pointer, collision):
-        sim = sim_pointer.contents           # get simulation object from pointer
-        pos1 = np.array(sim.particles[collision.p1].xyz) # position of particle 1
-        pos2 = np.array(sim.particles[collision.p2].xyz) # position of particle 1
-        sep = np.linalg.norm(pos1 - pos2)
-        cur_min = getattr(sim, "min_dist", np.inf)
-        # compute sep...
-        if sep < self.min_dist:
-            self.min_dist = sep
-        return 0
+import starforge_functions
 
 softening_length = 0
-
-def PE(xc, mc, hc):
-    """ xc - array of positions
-        mc - array of masses
-        hc - array of smoothing lengths
-        bc - array of magnetic field strengths
-    """
-    ## gravitational potential energy
-    phic = pytreegrav.Potential(xc, mc, hc, G=1, theta=0.5, method='bruteforce')  # G in code units
-    return 0.5 * (phic * mc).sum()
-# Calculate kinetic energy of a set of cells, include internal energy
-def KE(xc, mc, vc, uc):
-    """ xc - array of positions
-        mc - array of masses
-        vc - array of velocities
-        uc - array of internal energies
-    """
-    ## velocity w.r.t. com velocity
-    v_bulk = np.average(vc, weights=mc, axis=0)
-    v_well = vc - v_bulk
-    vSqr = np.sum(v_well ** 2, axis=1)
-    return (mc * (vSqr / 2 + uc)).sum()
-
-def get_binary_energy(ps, vs, ms, hc):
-    ##Defining particle variables for energy
-    ps = np.array(ps)
-    vs = np.array(vs)
-    ms = np.array(ms)
-    uc = 0
-    # hc = np.zeros(len(ps))
-    kin_en = KE(ps, ms, vs, uc)
-    ##Potential energy
-    pot_en = PE(ps, ms, hc)
-    ##Initial energy
-    en = kin_en + pot_en
-    return en
-
-def get_state(sim):
-    ##Trick to synchronize the accelerations
-    ##Is there a way to force the accelerations to be recomputed??
-    sim.integrate(sim.t + 1e-15 * sim.t)
-    accel1 = np.array((sim.particles[0].ax, sim.particles[0].ay, sim.particles[0].az))
-    accel2 = np.array((sim.particles[1].ax, sim.particles[1].ay, sim.particles[1].az))
-    accel3 = np.array((sim.particles[2].ax, sim.particles[2].ay, sim.particles[2].az))
-    ps = np.array([pp.xyz for pp in sim.particles])
-    vs = np.array([pp.vxyz for pp in sim.particles])
-    ms = np.array([pp.m for pp in sim.particles])
-    ##You will have to adjust the 4th argument when you have softening(!)
-    ##Systems are only grouped if we have
-    cl = cluster(ps, vs, ms, np.zeros(len(ps)), np.array([0, 1, 2]), np.array((accel1, accel2, accel3)), tides=True, sma_order=True, tides_factor=0.01)
-    return cl.systems
-
-def is_dissociated(current_systems, thres=30):
-    ##There should be two systems identified at the end of the integration: a binary and a single.
-    if len(current_systems) != 2:
-        return False
-    vel1 = current_systems[0].vel
-    vel2 = current_systems[1].vel
-    pos1 = current_systems[0].pos
-    pos2 = current_systems[1].pos
-    relative_velocity = vel1 - vel2
-    relative_position = pos1 - pos2
-    ##Binary and single have to be far apart and have to be moving away from each other
-    condition1 = np.linalg.norm(relative_position) > thres
-    condition2 = np.dot(relative_position, relative_velocity) > 0
-    return condition1 and condition2
 
 def run_simulation(coord):
     x = coord[0]
@@ -112,7 +19,7 @@ def run_simulation(coord):
     o2 = coord[4]
     sim = rebound.Simulation()
 
-    tracker = MinDistTracker()
+    tracker = starforge_functions.MinDistTracker()
     sim.collision = "line"
     sim.collision_resolve = tracker.callback
     ##Note that for simplicity we take GN = 1 (not the starforge value so we will need GN_override.txt for the code to work properly)
@@ -156,25 +63,25 @@ def run_simulation(coord):
     max_simulation_time = 1000 * orbs[1].P
     calculation_time = time.time() - calculation_start_time
     dissociated = False
-    current_systems = get_state(sim)
+    current_systems = starforge_functions.get_state(sim, softening_length)
     outer = current_systems[-1]
     #Initial energy
     en0 = sim.energy()
-    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
+    inner_en0 = starforge_functions.get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
     flag = -1
     
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(max(sim.t * 1.005, sim.t + (0.01 * orbs[1].P)))
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
-        current_systems = get_state(sim)
-        dissociated = is_dissociated(current_systems, thres=30)
+        current_systems = starforge_functions.get_state(sim, softening_length)
+        dissociated = starforge_functions.is_dissociated(current_systems, thres=30)
         if dissociated or (sim.t > max_simulation_time and len(current_systems) == 1):
             flag = int(dissociated)
-            current_systems = get_state(sim)
+            current_systems = starforge_functions.get_state(sim, softening_length)
             outer = current_systems[-1]
             current_orbits_after = outer.orbits[0]
-            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
+            inner_enf = starforge_functions.get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
             enf = sim.energy()
             end_state.update({
                 "time": sim.t, 
@@ -194,7 +101,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10000
+amt_trials = 10
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -213,4 +120,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newt_80.pq')
+df.to_parquet('test.pq')
