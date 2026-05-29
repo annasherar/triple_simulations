@@ -36,6 +36,8 @@ class MinDistTracker:
             self.min_dist = sep
         return 0
 
+softening_length = 0
+
 def PE(xc, mc, hc):
     """ xc - array of positions
         mc - array of masses
@@ -58,14 +60,13 @@ def KE(xc, mc, vc, uc):
     vSqr = np.sum(v_well ** 2, axis=1)
     return (mc * (vSqr / 2 + uc)).sum()
 
-def get_binary_energy(ps, vs, ms):
+def get_binary_energy(ps, vs, ms, hc):
     ##Defining particle variables for energy
-    # particles = sim.particles[particle_num]
     ps = np.array(ps)
     vs = np.array(vs)
     ms = np.array(ms)
     uc = 0
-    hc = np.zeros(len(ps))
+    # hc = np.zeros(len(ps))
     kin_en = KE(ps, ms, vs, uc)
     ##Potential energy
     pot_en = PE(ps, ms, hc)
@@ -118,7 +119,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M= x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.74, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.80, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -159,7 +160,7 @@ def run_simulation(coord):
     outer = current_systems[-1]
     #Initial energy
     en0 = sim.energy()
-    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
+    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
     flag = -1
     
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
@@ -173,7 +174,7 @@ def run_simulation(coord):
             current_systems = get_state(sim)
             outer = current_systems[-1]
             current_orbits_after = outer.orbits[0]
-            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
+            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
             enf = sim.energy()
             end_state.update({
                 "time": sim.t, 
@@ -212,4 +213,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newt_74.pq')
+df.to_parquet('newt_80.pq')

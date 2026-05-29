@@ -76,21 +76,20 @@ def get_all_energy(sim):
     vs = np.array([pp.vxyz for pp in sim.particles])
     ms = np.array([pp.m for pp in sim.particles])
     uc = 0
-    hc = [0.9,0.9,0.9]
+    hc = np.ones(len(ps))*softening_length
     kin_en = KE(ps, ms, vs, uc)
     ##Potential energy
     pot_en = PE(ps, ms, hc)
     ##Initial energy
     en = kin_en + pot_en
     return en
-def get_binary_energy(ps, vs, ms):
+def get_binary_energy(ps, vs, ms, hc):
     ##Defining particle variables for energy
     # particles = sim.particles[particle_num]
     ps = np.array(ps)
     vs = np.array(vs)
     ms = np.array(ms)
     uc = 0
-    hc = np.ones(len(ps))*0.9
     kin_en = KE(ps, ms, vs, uc)
     ##Potential energy
     pot_en = PE(ps, ms, hc)
@@ -150,7 +149,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.64, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.80, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -202,13 +201,12 @@ def run_simulation(coord):
     current_systems = get_state(sim)
     outer = current_systems[-1]
     en0 = get_all_energy(sim)
-    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
+    inner_en0 = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
     ## Ran to max CPU time
     flag = -1
 
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
         sim.integrate(max(sim.t * 1.005, sim.t + (0.01 * orbs[1].P)))
-        # print(sim.t/orbs[1].P)
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = get_state(sim)
@@ -239,7 +237,7 @@ def run_simulation(coord):
             ecc = 1 - rp / sma
             ##Final energy
             enf = get_all_energy(sim)
-            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2])
+            inner_enf = get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
             ##Need to use our more accurate method to calculate the orbits here...
             end_state.update({
                 "time": sim.t, 
@@ -276,8 +274,7 @@ with Pool(56) as p:
     end_state_all = p.map(run_simulation, coords)
 
 
-##We should have a placeholder in canse the integration is never finished...
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_64.pq')
+df.to_parquet('soft_80.pq')
