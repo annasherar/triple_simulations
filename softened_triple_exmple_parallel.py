@@ -32,7 +32,6 @@ def ForceKernel(r, h):
 
 softening_length = 0.9
 
-
 def run_simulation(coord):
     x = coord[0]
     i = coord[1]
@@ -53,7 +52,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non- eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.80, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -163,7 +162,7 @@ def run_simulation(coord):
 
 #Initializing random generator
 rng = np.random.default_rng()
-amt_trials = 10
+amt_trials = 10000
 M_values = rng.uniform(0, 2*np.pi, size=amt_trials) #100 even spaces from 0 to 2pi
 #Defining inclination
 cos_inc_values = rng.uniform(-1, 1, size=amt_trials)
@@ -181,4 +180,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet('soft_test.pq')
+df.to_parquet('soft_random.pq')
