@@ -1,12 +1,12 @@
-import numpy as np
-import rebound
 import time
-import pandas as pd
-import sys
-from starforge_mult_search.code.find_multiples_new2 import cluster, system
-import webbrowser
-import pytreegrav
 from multiprocessing import Pool
+
+import numpy as np
+import pandas as pd
+import pytreegrav
+import rebound
+from starforge_mult_search.code.find_multiples_new2 import cluster, system
+
 import starforge_functions
 
 softening_length = 0
@@ -67,7 +67,11 @@ def run_simulation(coord):
     outer = current_systems[-1]
     #Initial energy
     en0 = sim.energy()
-    inner_en0 = starforge_functions.get_binary_energy(outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2])
+    inner_en0 = starforge_functions.get_binary_energy(
+        outer.sub_pos[:2], outer.sub_vel[:2], outer.sub_mass[:2], outer.sub_soft[:2]
+    )
+
+    ## Ran to max CPU time
     flag = -1
     
     while not dissociated and (calculation_time < max_calculation_time) and (sim.t < max_simulation_time):
@@ -75,8 +79,9 @@ def run_simulation(coord):
         calculation_time = time.time() - calculation_start_time
         end_state["time"] = sim.t
         current_systems = starforge_functions.get_state(sim, softening_length)
-        dissociated = starforge_functions.is_dissociated(current_systems, thres=30)
+        dissociated = starforge_functions.is_dissociated(current_systems, thres=50)
         if dissociated or (sim.t > max_simulation_time and len(current_systems) == 1):
+            ## Stable condition
             flag = int(dissociated)
             current_systems = starforge_functions.get_state(sim, softening_length)
             outer = current_systems[-1]
@@ -96,7 +101,23 @@ def run_simulation(coord):
                 "inner_en0": inner_en0,
                 "energy_ratio": (enf-en0)/en0,
                 "state": flag
-                })
+                }
+            )
+        elif sim.t > max_simulation_time and len(current_systems) != 1:
+            end_state.update(
+                {
+                    "time": -np.inf,
+                    "sma": -np.inf,
+                    "ecc": -np.inf,
+                    "id1": -np.inf,
+                    "id2": -np.inf,
+                    "min_dist": -np.inf,
+                    "all_en0": -np.inf,
+                    "all_enf": -np.inf,
+                    "inner_enf": -np.inf,
+                    "inner_en0": -np.inf,
+                }
+            )
     return end_state
 
 #Initializing random generator
