@@ -1,6 +1,7 @@
 import time
 from multiprocessing import Pool
 
+import sys
 import numpy as np
 import pandas as pd
 import pytreegrav
@@ -10,6 +11,7 @@ from starforge_mult_search.code.find_multiples_new2 import cluster, system
 import starforge_functions
 
 softening_length = 0
+eccout = float(sys.argv[1])
 
 def run_simulation(coord):
     x = coord[0]
@@ -26,7 +28,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non-zero eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=eccout, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -139,4 +141,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file -- YOU SHOULD CHANGE THIS NAME
-df.to_parquet('newt_random.pq')
+df.to_parquet(f"new_newt_{int(eccout*100)}.pq")

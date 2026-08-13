@@ -1,6 +1,7 @@
 import time
 from multiprocessing import Pool
 
+import sys
 import numpy as np
 import pandas as pd
 import pytreegrav
@@ -41,6 +42,7 @@ def ForceKernel(r, h):
 
 
 softening_length = 0.9
+eccout = float(sys.argv[1])
 
 
 def run_simulation(coord):
@@ -62,7 +64,7 @@ def run_simulation(coord):
     sim.add(m=1)
     ##Introduce slight non- eccentricity because otherwise mean anomaly is poorly defined.
     sim.add(m=1, a=1, M=x, inc=i, e=iecc, Omega=o1, omega=o2, r=0.9)
-    sim.add(m=1, a=10, e=0.9, M=np.pi, r=0.9)
+    sim.add(m=1, a=10, e=eccout, M=np.pi, r=0.9)
     ##Switch to com frame...
     sim.move_to_com()
     orbs = sim.orbits()
@@ -233,4 +235,4 @@ with Pool(56) as p:
 ##Creating dataframe
 df = pd.DataFrame(end_state_all)
 ##Convert dataframe to parquet file
-df.to_parquet("soft_random.pq")
+df.to_parquet(f"new_soft_{int(eccout*100)}.pq")
